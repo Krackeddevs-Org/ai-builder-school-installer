@@ -616,18 +616,28 @@ mod tests {
 
     #[test]
     fn path_with_dirs_prepends_homebrew_to_launchd_path() {
-        let bare = OsString::from("/usr/bin:/bin:/usr/sbin:/sbin");
+        // Build the launchd PATH with the HOST separator, so this test asserts the same
+        // thing on Windows (where `;` is the separator and `/usr/bin` means nothing).
+        let bare_dirs = ["/usr/bin", "/bin", "/usr/sbin", "/sbin"];
+        let bare = std::env::join_paths(bare_dirs).unwrap();
         let extra = well_known_bin_dirs_for(Os::Macos);
         let out = path_with_dirs(Some(bare), &extra);
         let parts: Vec<PathBuf> = std::env::split_paths(&out).collect();
+
+        // Homebrew is prepended so its tools win over the system shims.
         assert_eq!(parts[0], PathBuf::from("/opt/homebrew/bin"));
-        assert!(parts.contains(&PathBuf::from("/usr/bin")));
-        assert!(parts.contains(&PathBuf::from("/sbin")));
+        // ...and every original entry survives.
+        for d in bare_dirs {
+            assert!(
+                parts.contains(&PathBuf::from(d)),
+                "original entry {d} was dropped"
+            );
+        }
     }
 
     #[test]
     fn path_with_dirs_does_not_duplicate_existing_entries() {
-        let existing = OsString::from("/usr/bin:/opt/homebrew/bin");
+        let existing = std::env::join_paths(["/usr/bin", "/opt/homebrew/bin"]).unwrap();
         let extra = vec![PathBuf::from("/opt/homebrew/bin")];
         let out = path_with_dirs(Some(existing), &extra);
         let count = std::env::split_paths(&out)
