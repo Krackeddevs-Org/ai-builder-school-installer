@@ -53,7 +53,11 @@ pub fn detect() -> DetectionReport {
         } else if let Some(c) = &cmd {
             (
                 "pending".to_string(),
-                "needs installing".to_string(),
+                if platform::brew_bootstrap_command().is_some() {
+                    "needs installing (Homebrew first)".to_string()
+                } else {
+                    "needs installing".to_string()
+                },
                 Some(c.display.clone()),
             )
         } else {
@@ -161,14 +165,37 @@ pub fn install_tool(id: String, dry_run: bool) -> RunResult {
         }
     };
 
+    let bootstrap = platform::brew_bootstrap_command();
+
     if dry_run {
+        let steps = match &bootstrap {
+            Some(b) => format!("{} && {}", b.display, cmd.display),
+            None => cmd.display.clone(),
+        };
         return RunResult {
             ok: true,
             status: "pending".into(),
-            detail: format!("[dry-run] would run: {}", cmd.display),
+            detail: format!("[dry-run] would run: {steps}"),
             command: Some(cmd.display),
         };
     }
+
+    // A fresh Mac has no Homebrew. Install it first; if that can't be done unattended,
+    // say why and fall back to manual rather than failing opaquely.
+    let cmd = if bootstrap.is_some() {
+        if let Err(reason) = platform::ensure_brew() {
+            return RunResult {
+                ok: false,
+                status: "manual".into(),
+                detail: format!("{reason} {}", platform::manual_instructions(tool).join(" ")),
+                command: bootstrap.map(|b| b.display),
+            };
+        }
+        // brew now exists, possibly at a different path than the one guessed earlier.
+        platform::install_command(tool).unwrap_or(cmd)
+    } else {
+        cmd
+    };
 
     match cmd.run() {
         Ok(_) => {
