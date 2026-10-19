@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "tauri": "tauri",
-    "test:ui": "node tests/ui-flow.test.mjs",
+    "test:ui": "node tests/ui-flow.test.mjs && node tests/links-and-feedback.test.mjs",
     "dev": "tauri dev",
     "build": "tauri build",
     "build:linux": "tauri build --bundles deb,appimage,rpm",
@@ -17,7 +17,10 @@
     "verify:appimage": "./scripts/verify-appimage.sh"
   },
   "devDependencies": {
-    "playwright": "^1.49.0",
-    "@tauri-apps/cli": "^2.12.3"
+    "@tauri-apps/cli": "^2.12.3",
+    "playwright": "^1.49.0"
+  },
+  "dependencies": {
+    "@tauri-apps/plugin-opener": "^2.7.2"
   }
 }

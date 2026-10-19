@@ -6,6 +6,17 @@ const invoke = (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.co
   ? window.__TAURI__.core.invoke
   : null;
 
+/* External links must be handed to the OS. A Tauri webview refuses to navigate away from
+ * the app bundle, so a plain <a href="https://..."> click does nothing at all — the student
+ * clicks and the app appears frozen. Route every external link through the opener plugin. */
+const openUrl = (() => {
+  const plugin = window.__TAURI__ && window.__TAURI__.opener && window.__TAURI__.opener.openUrl;
+  if (plugin) return plugin;
+  if (invoke) return (url) => invoke("plugin:opener|open_url", { url });
+  // Browser preview: a normal tab is fine.
+  return (url) => Promise.resolve(window.open(url, "_blank", "noopener"));
+})();
+
 const DEMO = !invoke;
 const BASE_URL = "https://litellm.rapidscreen.io/v1";
 const PREF_KEY = "aibs.preferredModel";
@@ -326,11 +337,14 @@ async function ping() {
   state.selectedModel = res.default_model || state.models[0] || null;
 
   $("fKey").classList.add("ok");
-  $("pingResult").textContent = res.message + " (" + res.latency_ms + " ms)";
+  // Defensive: never render "undefined" at a student, whatever the backend returns.
+  const msg = typeof res.message === "string" && res.message ? res.message : "Connected.";
+  const ms = Number.isFinite(Number(res.latency_ms)) ? " (" + res.latency_ms + " ms)" : "";
+  $("pingResult").textContent = msg + ms;
   $("pingResult").style.color = "var(--ok)";
   badge.className = "badge ok"; badge.innerHTML = icon("check", 12) + "<span>connected</span>";
   $("btnApply").disabled = false;
-  log("✓ " + res.message, "ok");
+  log("✓ " + msg, "ok");
   renderModels();
 }
 
@@ -460,16 +474,130 @@ async function openFolder() {
   if (p && p.trim()) openCode(p.trim());
 }
 
+/* ── external links ────────────────────────────────────────────────────── */
+
+/** Send a URL to the OS browser. Falls back to copy-to-clipboard messaging if that fails,
+ *  so the student is never left with a dead click and no explanation. */
+async function goTo(url, label) {
+  try {
+    await openUrl(url);
+    log("→ opened " + (label || url) + " in your browser");
+  } catch (e) {
+    // Last resort: put it on the clipboard and say so, rather than failing silently.
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(url);
+      copied = true;
+    } catch (_) { /* clipboard may be unavailable */ }
+    log(
+      copied
+        ? "! couldn't open the browser — link copied to clipboard: " + url
+        : "! couldn't open the browser. The link is: " + url,
+      "er"
+    );
+  }
+}
+
+/** Intercept every external <a> click. In the webview these do nothing by default. */
+function wireExternalLinks(root) {
+  (root || document).querySelectorAll('a[href^="http"]').forEach((a) => {
+    if (a.dataset.wired === "1") return;
+    a.dataset.wired = "1";
+    a.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      goTo(a.getAttribute("href"), a.textContent.trim());
+    });
+  });
+}
+
+/* ── click feedback ────────────────────────────────────────────────────── */
+
+/** Tauri swallows native `:active` on some Linux/WebKit builds, so a press can look like
+ *  nothing happened and students click again. We drive a visible pressed state ourselves
+ *  and disable the control while its work is in flight. */
+function wireButtonFeedback(root) {
+  (root || document).querySelectorAll("button").forEach((btn) => {
+    if (btn.dataset.fb === "1") return;
+    btn.dataset.fb = "1";
+
+    const press = () => btn.classList.add("pressed");
+    const release = () => btn.classList.remove("pressed");
+
+    // Pointer events cover mouse, touch and pen. Keyboard needs its own handling.
+    btn.addEventListener("pointerdown", press);
+    btn.addEventListener("pointerup", release);
+    btn.addEventListener("pointerleave", release);
+    btn.addEventListener("pointercancel", release);
+    btn.addEventListener("keydown", (e) => {
+      if (e.key === " " || e.key === "Enter") press();
+    });
+    btn.addEventListener("keyup", release);
+    btn.addEventListener("blur", release);
+
+    // A ripple gives immediate feedback even when the work itself is quick.
+    btn.addEventListener("pointerdown", (e) => {
+      const r = btn.getBoundingClientRect();
+      const ripple = document.createElement("span");
+      ripple.className = "ripple";
+      const size = Math.max(r.width, r.height) * 2;
+      ripple.style.width = ripple.style.height = size + "px";
+      ripple.style.left = (e.clientX - r.left - size / 2) + "px";
+      ripple.style.top = (e.clientY - r.top - size / 2) + "px";
+      btn.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 520);
+    });
+  });
+}
+
+/** Wrap an async handler so the button shows a busy state and cannot be double-fired.
+ *
+ *  Two guards, because they cover different failures:
+ *  - a synchronous latch set the instant the click lands, which closes the window between
+ *    a fast handler resolving and the next click arriving;
+ *  - `disabled` during the work, which stops keyboard and repeat clicks too.
+ *  The latch is released on a microtask after the handler settles so a genuinely fast
+ *  action still cannot be re-entered by a double-click. */
+function busy(btn, fn) {
+  let running = false;
+  return async (...args) => {
+    if (running || btn.disabled) return;
+    running = true;
+    btn.classList.add("busy");
+    if (!btn.querySelector(".spinner")) {
+      const s = document.createElement("span");
+      s.className = "spinner";
+      btn.appendChild(s);
+    }
+    try {
+      await fn(...args);
+    } finally {
+      // Hold the latch through the current task, then release.
+      await new Promise((r) => setTimeout(r, 180));
+      running = false;
+      btn.classList.remove("busy");
+      const sp = btn.querySelector(".spinner");
+      if (sp) sp.remove();
+    }
+  };
+}
+
 /* ── wire up ───────────────────────────────────────────────────────────── */
 window.addEventListener("DOMContentLoaded", () => {
   if (window.Icons) window.Icons.hydrate(document);
-  $("btnRecheck").addEventListener("click", () => { $("logWrap").classList.add("hidden"); $("logBox").innerHTML = ""; detect(); });
-  $("btnInstall").addEventListener("click", installAll);
-  $("btnPing").addEventListener("click", ping);
-  $("btnApply").addEventListener("click", apply);
-  $("btnSkipKey").addEventListener("click", skipKey);
-  $("btnOpenCode").addEventListener("click", () => openCode());
-  $("btnOpenFolder").addEventListener("click", openFolder);
+  wireExternalLinks(document);
+  wireButtonFeedback(document);
+
+  $("btnRecheck").addEventListener("click", busy($("btnRecheck"), () => {
+    $("logWrap").classList.add("hidden");
+    $("logBox").innerHTML = "";
+    return detect();
+  }));
+  $("btnInstall").addEventListener("click", busy($("btnInstall"), installAll));
+  $("btnPing").addEventListener("click", busy($("btnPing"), ping));
+  $("btnApply").addEventListener("click", busy($("btnApply"), apply));
+  $("btnSkipKey").addEventListener("click", busy($("btnSkipKey"), skipKey));
+  $("btnOpenCode").addEventListener("click", busy($("btnOpenCode"), () => openCode()));
+  $("btnOpenFolder").addEventListener("click", busy($("btnOpenFolder"), openFolder));
   $("apiKey").addEventListener("keydown", (e) => { if (e.key === "Enter") ping(); });
   detect();
 });

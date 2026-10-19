@@ -118,22 +118,32 @@ const run = async () => {
   await shot(page, "02-api-step");
 
   console.log("\n=== 3. API key validation ===");
+  // The button holds a short latch after finishing so a double-click can't re-fire it.
+  // Wait for it to be free before the next click, exactly as a human would.
+  const clickPing = async () => {
+    await waitFor(page, () => {
+      const b = document.getElementById("btnPing");
+      return b && !b.classList.contains("busy") && !b.disabled;
+    }, 8000, "ping button free");
+    await page.locator("#btnPing").click();
+  };
+
   // Empty key -> refuses locally without a network call.
-  await page.locator("#btnPing").click();
-  await sleep(400);
+  await clickPing();
+  await waitFor(page, () => /enter your api key/i.test(document.getElementById("pingResult").textContent), 5000, "empty-key message");
   let ping = await page.locator("#pingResult").innerText();
   check("empty key is caught before any request", /enter your api key/i.test(ping), ping);
 
   // Bad key -> rejected.
   await page.fill("#apiKey", "not-a-real-key");
-  await page.locator("#btnPing").click();
+  await clickPing();
   await waitFor(page, () => /rejected|401/i.test(document.getElementById("pingResult").textContent), 8000, "rejection");
   ping = await page.locator("#pingResult").innerText();
   check("invalid key is rejected with a clear message", /rejected|401/i.test(ping), ping);
 
   // Good key -> models fetched.
   await page.fill("#apiKey", DEMO_KEY);
-  await page.locator("#btnPing").click();
+  await clickPing();
   await waitFor(page, () => document.querySelectorAll("#modelGrid .model").length > 0, 10000, "model list");
   const modelCount = await page.locator("#modelGrid .model").count();
   check("models are fetched after a valid key", modelCount >= 10, "got " + modelCount);
@@ -162,7 +172,7 @@ const run = async () => {
   await page.locator("#btnInstall").click();
   await waitFor(page, () => !document.getElementById("viewApi").classList.contains("hidden"), 20000, "api view again");
   await page.fill("#apiKey", DEMO_KEY);
-  await page.locator("#btnPing").click();
+  await clickPing();
   await waitFor(page, () => document.querySelectorAll("#modelGrid .model").length > 0, 10000, "models again");
   const defAfterReload = await page.locator("#modelGrid .model.on .nm").innerText();
   check("remembered model is re-selected on reconnect", defAfterReload === "gpt-5.5", defAfterReload);

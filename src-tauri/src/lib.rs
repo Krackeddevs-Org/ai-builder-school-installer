@@ -11,6 +11,10 @@ pub mod steps;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        // Required for external links: a Tauri webview refuses to navigate away from the
+        // app, so plain <a href> clicks are silently swallowed. The frontend routes them
+        // through this plugin instead.
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             steps::detect,
             steps::install_tool,
