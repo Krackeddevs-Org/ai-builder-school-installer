@@ -588,7 +588,9 @@ mod tests {
         );
         let intel = root.touch("usr/local/bin/brew");
         assert_eq!(
-            find_brew_under(&root.0, |_| panic!("which() must not run when brew is found")),
+            find_brew_under(&root.0, |_| panic!(
+                "which() must not run when brew is found"
+            )),
             Some(intel.to_string_lossy().to_string())
         );
     }
@@ -657,10 +659,12 @@ mod tests {
         assert_eq!(c.args.len(), 2);
         assert_eq!(c.args[0], "-c");
         assert!(c.args[1].starts_with("NONINTERACTIVE=1 /bin/bash -c \"$(curl -fsSL "));
-        assert!(c
-            .args[1]
+        assert!(c.args[1]
             .ends_with("https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""));
-        assert!(!c.args[1].contains("  "), "line continuation left stray spaces");
+        assert!(
+            !c.args[1].contains("  "),
+            "line continuation left stray spaces"
+        );
         assert!(c.display.starts_with("/bin/bash -c NONINTERACTIVE=1"));
     }
 
@@ -673,8 +677,10 @@ mod tests {
     #[test]
     fn brew_install_error_explains_the_cause() {
         assert!(brew_install_error("Need sudo access on macOS").contains("administrator password"));
-        assert!(brew_install_error("sudo: a terminal is required to read the password")
-            .contains("administrator password"));
+        assert!(
+            brew_install_error("sudo: a terminal is required to read the password")
+                .contains("administrator password")
+        );
         assert!(brew_install_error("curl: (6) Could not resolve host").contains("internet"));
         assert!(brew_install_error("???").contains("couldn't be installed"));
     }
