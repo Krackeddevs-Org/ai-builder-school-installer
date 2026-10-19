@@ -79,6 +79,9 @@ const run = async () => {
 
   const ragmi = page.locator(".rail-foot a");
   check("ar-Raqmi link is present", (await ragmi.count()) === 1);
+  check("no target=_blank on the rail link (would open a second tab)",
+    (await ragmi.getAttribute("target")) === null,
+    "target=" + (await ragmi.getAttribute("target")));
 
   const urlBefore = page.url();
   await ragmi.click();
@@ -97,6 +100,9 @@ const run = async () => {
 
   const kd = page.locator('#viewApi a[href*="krackeddevs"]');
   check("KrackedDevs link is present", (await kd.count()) === 1);
+  check("no target=_blank on the KrackedDevs link",
+    (await kd.getAttribute("target")) === null,
+    "target=" + (await kd.getAttribute("target")));
 
   const urlBefore2 = page.url();
   await kd.click();
@@ -105,6 +111,24 @@ const run = async () => {
   check("KrackedDevs click calls openUrl",
     opened.includes("https://krackeddevs.com/dashboard/profile"), JSON.stringify(opened));
   check("KrackedDevs click does not navigate away", page.url() === urlBefore2);
+
+  console.log("\n=== 2b. one click opens exactly ONE tab ===");
+  // Regression: a stray target="_blank" plus the plugin opened the browser twice.
+  const before2 = await page.evaluate(() => window.__openedUrls.length);
+  await kd.click();
+  await sleep(300);
+  const after2 = await page.evaluate(() => window.__openedUrls.length);
+  check("a single click produces exactly one openUrl call",
+    after2 - before2 === 1, "delta=" + (after2 - before2));
+
+  // And two rapid taps should not double-open either.
+  const before3 = await page.evaluate(() => window.__openedUrls.length);
+  await kd.click();
+  await kd.click();
+  await sleep(300);
+  const after3 = await page.evaluate(() => window.__openedUrls.length);
+  check("a rapid double-tap produces exactly one openUrl call",
+    after3 - before3 === 1, "delta=" + (after3 - before3));
 
   console.log("\n=== 3. press feedback ===");
   const btn = page.locator("#btnPing");

@@ -1,6 +1,6 @@
 [package]
 name = "aibs-setup"
-version = "0.1.1"
+version = "0.1.2"
 description = "AI Builder School setup wizard — installs VS Code, Git, Node, Kilo Code and configures your API key"
 authors = ["ar-Raqmi"]
 edition = "2021"

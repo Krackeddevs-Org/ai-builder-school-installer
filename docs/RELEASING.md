@@ -67,23 +67,34 @@ npm run build:mac
 npm run build:win     # must be run ON Windows
 ```
 
-## Code signing (not done yet)
+## Code signing
 
-Right now the builds are **unsigned**, which means:
+The builds use an **ad-hoc signature** (`"signingIdentity": "-"` in `tauri.conf.json`).
+This is not optional on Apple Silicon: macOS **requires** a signature on any app
+downloaded from the internet, and without one the `.dmg` reports the app *"is damaged and
+can't be opened"* — which reads as malware to a student. Tauri's own docs name this exact
+setting for that case.
 
-- **macOS** — Gatekeeper will block the `.dmg`. Students must right-click → Open, or run
-  `xattr -d com.apple.quarantine "/Applications/AI Builder School Setup.app"`.
-- **Windows** — SmartScreen will show "Windows protected your PC" → *More info* → *Run
-  anyway*.
+Ad-hoc signing fixes the "damaged" hard failure. It does **not** make the app trusted, so
+first launch still hits Gatekeeper:
 
-Both look alarming to a non-technical student. Fixing it properly needs:
+- **macOS** — right-click the app → **Open** → **Open**. Or:
+  `xattr -d com.apple.quarantine "/Applications/AI Builder School Setup.app"`
+- **Windows** — SmartScreen shows "Windows protected your PC" → *More info* → *Run anyway*.
 
-- **Apple Developer Program** — $99/year, then set `APPLE_CERTIFICATE`,
-  `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`,
-  `APPLE_PASSWORD`, `APPLE_TEAM_ID` as repo secrets.
-- **Windows** — an EV code-signing certificate (a few hundred/year).
+> On macOS, the plain *right-click → Open* path does **not** work when the app is
+> reported as damaged — only when Gatekeeper is merely "unverified". A correctly
+> ad-hoc-signed build takes the second path. If a student still sees "damaged", the
+> signature is missing or broken, not merely untrusted.
 
-For a classroom, the unsigned route with clear instructions is usually fine. Revisit if
+Removing these prompts entirely needs a paid identity:
+
+| Platform | Requirement | Cost |
+|---|---|---|
+| macOS | Apple Developer Program, then set `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` as repo secrets | $99/year |
+| Windows | EV code-signing certificate | a few hundred/year |
+
+For a classroom the ad-hoc route plus clear instructions is usually acceptable. Revisit if
 students start bouncing off it.
 
 ## Release checklist

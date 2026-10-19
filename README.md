@@ -26,8 +26,15 @@ Grab the file for your machine from the [**Releases page**](../../releases/lates
 > ./"AI Builder School Setup_0.1.0_amd64.AppImage"
 > ```
 
-The builds aren't code-signed yet, so your OS may grumble the first time — [what to do
-about it](docs/RELEASING.md#code-signing-not-done-yet).
+The builds are ad-hoc signed, not notarized, so your OS may warn you the first time:
+
+- **macOS** — right-click the app → **Open** → **Open**, or:
+  ```
+  xattr -d com.apple.quarantine "/Applications/AI Builder School Setup.app"
+  ```
+  (If you see *"is damaged and can't be opened"* instead, that build is missing its
+  signature — tell me, don't work around it.)
+- **Windows** — "Windows protected your PC" → **More info** → **Run anyway**
 
 ![System check](docs/screenshots/01-detect.png)
 

@@ -477,8 +477,18 @@ async function openFolder() {
 /* ── external links ────────────────────────────────────────────────────── */
 
 /** Send a URL to the OS browser. Falls back to copy-to-clipboard messaging if that fails,
- *  so the student is never left with a dead click and no explanation. */
+ *  so the student is never left with a dead click and no explanation.
+ *
+ *  Guarded against re-entry so one click can never open two tabs. The window is short
+ *  (250ms) and keyed on the URL, because two openers firing for the SAME click happen
+ *  within a few milliseconds of each other, whereas a genuine second click by the user is
+ *  far slower. A longer window would swallow real repeat clicks. */
+let lastOpen = { url: "", at: 0 };
 async function goTo(url, label) {
+  const now = Date.now();
+  if (lastOpen.url === url && now - lastOpen.at < 250) return; // same click, different opener
+  lastOpen = { url, at: now };
+
   try {
     await openUrl(url);
     log("→ opened " + (label || url) + " in your browser");
