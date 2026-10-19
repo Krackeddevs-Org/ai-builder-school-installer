@@ -1,0 +1,26 @@
+# Secrets — never commit
+api.env
+.env
+*.env.local
+
+# Rust
+/target/
+**/*.rs.bk
+
+# Node / frontend
+node_modules/
+dist/
+.vite/
+
+# Test artifacts
+tests/screenshots/
+
+# Tauri generated schemas
+src-tauri/gen/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

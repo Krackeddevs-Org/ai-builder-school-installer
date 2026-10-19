@@ -1,0 +1,19 @@
+{
+  "name": "aibs-setup",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI Builder School setup wizard",
+  "type": "module",
+  "scripts": {
+    "test:ui": "node tests/ui-flow.test.mjs",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "build:linux": "tauri build --bundles deb,appimage,rpm",
+    "build:mac": "tauri build --bundles dmg,app",
+    "build:win": "tauri build --bundles nsis,msi"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0",
+    "@tauri-apps/cli": "^2.12.3"
+  }
+}

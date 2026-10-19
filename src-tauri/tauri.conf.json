@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "AI Builder School Setup",
+  "version": "0.1.0",
+  "identifier": "school.theaibuilder.setup",
+  "build": {
+    "frontendDist": "../ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "AI Builder School — Setup",
+        "width": 1000,
+        "height": 680,
+        "minWidth": 880,
+        "minHeight": 600,
+        "resizable": true,
+        "center": true,
+        "decorations": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: asset: http://asset.localhost; connect-src 'self' ipc: http://ipc.localhost https://litellm.rapidscreen.io"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["deb", "appimage", "rpm", "dmg", "app", "nsis", "msi"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "DeveloperTool",
+    "shortDescription": "One-click setup for AI Builder School",
+    "longDescription": "Installs VS Code, Git, Node.js and the Kilo Code extension, then configures your AI Builder School API key so you can start building immediately."
+  }
+}

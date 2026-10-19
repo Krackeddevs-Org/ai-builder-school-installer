@@ -1,0 +1,88 @@
+name: Release
+
+# Builds installers for all three OSes on native runners.
+# Triggered by pushing a tag like v0.1.0.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: "--bundles dmg,app"
+            label: macOS
+          - platform: ubuntu-22.04
+            args: "--bundles deb,appimage,rpm"
+            label: Linux
+          - platform: windows-latest
+            args: "--bundles nsis,msi"
+            label: Windows
+
+    runs-on: ${{ matrix.platform }}
+    name: Build (${{ matrix.label }})
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Run Rust unit tests
+        working-directory: src-tauri
+        run: cargo test --lib
+
+      - name: Build the app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "AI Builder School Setup ${{ github.ref_name }}"
+          releaseBody: |
+            One-click setup for AI Builder School students.
+
+            Installs VS Code, Git, Node.js and the Kilo Code extension, then configures
+            your API key. Download the installer for your platform below.
+
+            **Windows:** `.msi` or `.exe` · **macOS:** `.dmg` · **Linux:** `.deb`, `.rpm`, `.AppImage`
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Builder School — Setup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="shell">
+
+  <aside class="rail">
+    <div class="rail-brand">
+      <img src="assets/mark.png" alt="AI Builder School">
+    </div>
+    <div class="rail-label">Setup progress</div>
+    <ol class="steps" id="stepList"></ol>
+    <div class="rail-foot">
+      setup by <a href="https://ar-raqmi.net/" target="_blank" rel="noopener">ar-Raqmi</a>
+      <span class="os" id="osLabel"></span>
+    </div>
+  </aside>
+
+  <main>
+    <div class="head">
+      <div class="eyebrow" id="eyebrow">Getting started</div>
+      <h1 id="title">Setting up your machine</h1>
+      <p class="lede" id="lede">We check what you already have before installing anything — existing tools are left untouched.</p>
+    </div>
+
+    <div class="sep"></div>
+
+    <div class="scroll">
+
+      <!-- ── Step 1: environment ─────────────────────────────────────── -->
+      <section id="viewEnv">
+        <div class="progress"><i id="progBar"></i></div>
+        <div class="card" style="margin-top:14px">
+          <div class="card-head">
+            <span class="card-title"><i data-icon="monitor" data-size="17"></i>System check</span>
+            <span class="badge idle" id="envBadge"><span>checking</span></span>
+          </div>
+          <div id="taskRows"></div>
+        </div>
+        <div id="manualBoxWrap" class="hidden">
+          <div class="callout" style="border-left-color:#8a5a00">
+            <i data-icon="warn" data-size="17" style="color:#8a5a00"></i>
+            <div class="ct"><b>Manual step needed</b><span id="manualBox"></span></div>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn quiet left" id="btnRecheck"><i data-icon="refresh" data-size="16"></i>Re-check</button>
+          <button class="btn primary" id="btnInstall"><i data-icon="rocket" data-size="16"></i>Install everything</button>
+        </div>
+      </section>
+
+      <!-- ── Step 2: API key ─────────────────────────────────────────── -->
+      <section id="viewApi" class="hidden">
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title"><i data-icon="plug" data-size="17"></i>Connect your API key</span>
+            <span class="badge idle" id="apiBadge"><span>not connected</span></span>
+          </div>
+
+          <div class="fields">
+            <div class="field" id="fBase">
+              <label>Base URL</label>
+              <div class="v">https://litellm.rapidscreen.io/v1</div>
+            </div>
+            <div class="field" id="fKey">
+              <label>API key</label>
+              <input id="apiKey" type="password" placeholder="sk-…" autocomplete="off" spellcheck="false">
+            </div>
+          </div>
+
+          <div class="callout">
+            <i data-icon="key" data-size="17"></i>
+            <div class="ct">
+              <b>Where do I get my key?</b>
+              <span>Copy it from your KrackedDevs profile dashboard, under the API section. </span>
+              <a href="https://krackeddevs.com/dashboard/profile" target="_blank" rel="noopener">Open profile dashboard <i data-icon="external" data-size="13"></i></a>
+            </div>
+          </div>
+
+          <div class="row" style="margin-bottom:13px">
+            <button class="btn ghost" id="btnPing" style="align-self:stretch">
+              <i data-icon="plug" data-size="16"></i>Test connection
+            </button>
+            <div class="field" style="display:flex;align-items:center">
+              <div class="v" id="pingResult" style="color:var(--fg-faint)">Press “Test connection” to fetch your models.</div>
+            </div>
+          </div>
+
+          <div id="modelWrap" class="hidden">
+            <div class="eyebrow" style="margin-bottom:8px">Choose your default model</div>
+            <div class="models" id="modelGrid"></div>
+          </div>
+
+          <div class="actions">
+            <button class="btn quiet left" id="btnSkipKey"><i data-icon="skip" data-size="16"></i>Skip — use Kilo's free models</button>
+            <button class="btn primary" id="btnApply" disabled><i data-icon="check" data-size="16"></i>Save &amp; finish</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Step 3: done ───────────────────────────────────────────── -->
+      <section id="viewDone" class="hidden">
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title"><i data-icon="shield" data-size="17"></i>You're ready</span>
+            <span class="badge ok"><i data-icon="check" data-size="12"></i><span>complete</span></span>
+          </div>
+          <div id="doneSummary"></div>
+          <div class="callout" style="margin-top:14px;margin-bottom:0">
+            <i data-icon="info" data-size="17"></i>
+            <div class="ct">
+              <b>What to do next</b>
+              <span>Open VS Code, open your project folder, then click the <b style="display:inline">Kilo Code</b> icon in the sidebar. Pick your model and start building.</span>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn ghost" id="btnOpenFolder"><i data-icon="folder" data-size="16"></i>Open a project folder</button>
+            <button class="btn primary" id="btnOpenCode"><i data-icon="code" data-size="16"></i>Open VS Code</button>
+          </div>
+        </div>
+      </section>
+
+      <div id="logWrap" class="hidden" style="margin-bottom:14px">
+        <div class="eyebrow" style="margin-bottom:7px">Activity log</div>
+        <div class="log" id="logBox"></div>
+      </div>
+
+    </div>
+
+    <div class="foot">
+      <div class="toggle" id="themeToggle">
+        <button data-t="light" class="on"><i data-icon="sun" data-size="13"></i>Light</button>
+        <button data-t="dark"><i data-icon="moon" data-size="13"></i>Dark</button>
+        <button data-t="system"><i data-icon="monitor" data-size="13"></i>System</button>
+      </div>
+      <div class="sp"></div>
+      <div class="hint" id="footHint"></div>
+    </div>
+  </main>
+</div>
+
+<script src="icons.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
