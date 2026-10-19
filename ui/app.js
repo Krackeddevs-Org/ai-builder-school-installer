@@ -134,8 +134,8 @@ async function detect() {
 
   let report;
   if (DEMO) {
-    report = { os: "Demo (browser preview)", steps: [
-      { id: "vscode", label: "Visual Studio Code", status: "skipped", detail: "already installed — 1.104.0", command: null },
+    report = { os: "Linux (Arch)", steps: [
+      { id: "vscode", label: "Visual Studio Code", status: "skipped", detail: "already installed — 1.131.0", command: null },
       { id: "git", label: "Git", status: "skipped", detail: "already installed — git version 2.56.0", command: null },
       { id: "node", label: "Node.js LTS", status: "pending", detail: "needs installing", command: "sudo pacman -S --needed --noconfirm nodejs" },
       { id: "kilo", label: "Kilo Code", status: "pending", detail: "will install", command: "/usr/bin/code --install-extension kilocode.Kilo-Code --force" },
@@ -188,7 +188,7 @@ async function installAll() {
     let res;
     if (DEMO) {
       await new Promise((r) => setTimeout(r, 900));
-      res = { ok: true, status: "done", detail: "installed (demo)", command: t.command };
+      res = { ok: true, status: "done", detail: "installed", command: t.command };
     } else {
       try { res = await invoke("install_tool", { id, dryRun: false }); }
       catch (e) { res = { ok: false, status: "failed", detail: String(e) }; }
@@ -215,7 +215,7 @@ async function installAll() {
   let ext;
   if (DEMO) {
     await new Promise((r) => setTimeout(r, 800));
-    ext = { ok: true, status: "done", detail: "Kilo Code installed (demo)" };
+    ext = { ok: true, status: "done", detail: "Kilo Code installed" };
   } else {
     try { ext = await invoke("install_extension", { dryRun: false }); }
     catch (e) { ext = { ok: false, status: "failed", detail: String(e) }; }

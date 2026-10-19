@@ -10,7 +10,8 @@
     "build": "tauri build",
     "build:linux": "tauri build --bundles deb,appimage,rpm",
     "build:mac": "tauri build --bundles dmg,app",
-    "build:win": "tauri build --bundles nsis,msi"
+    "build:win": "tauri build --bundles nsis,msi",
+    "screenshots": "node tests/capture-screenshots.mjs"
   },
   "devDependencies": {
     "playwright": "^1.49.0",

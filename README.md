@@ -1,165 +1,99 @@
-# AI Builder School — Setup Wizard
+<div align="center">
+  <h1>AI Builder School Installer</h1>
+  <p><em>Press install, paste your API key, start vibe coding.</em></p>
+</div>
 
-**One click. Press install, paste your API key, and start building.**
+I've been enjoying entering the **AI Builder School**, but the problem I kept seeing is that we always waste so much time on the setup session instead of the actual coding. Every class someone's stuck on installing VSCode, or Git isn't on the PATH, or Kilo Code isn't connected, or the API key isn't working — and by the time everyone's sorted, half the session is gone.
 
-A cross-platform desktop wizard that sets up everything an AI Builder School student
-needs, so class time goes to building instead of installing:
+So I made this **AI Builder School Installer** :>
 
-**VS Code → Git → Node.js → Kilo Code extension → API key → done.**
+![System check](docs/screenshots/01-detect.png)
 
-Built with **Tauri** (Rust backend, plain HTML/CSS/JS frontend) in the
-**AI Builder School brand style**.
-
----
-
-## What it does
-
-1. **Checks first, installs second.** Detects what's already on your machine and skips
-   it. Existing installs are never overwritten.
-2. **Installs what's missing** using the right tool per OS:
-   - Windows → `winget`
-   - macOS → `brew`
-   - Linux → `pacman` / `apt` / `dnf` (auto-detected)
-3. **Installs the Kilo Code extension** into VS Code.
-4. **Connects your API key.** Paste it, hit Test connection, and the wizard pings the
-   live gateway and fetches your available models.
-5. **Writes the Kilo config** so the provider is ready the moment you open VS Code.
-6. **Verifies at the end** and tells you exactly what to do next.
-
-You can also **skip the API key** and use Kilo Code's own free models instead.
-
-## After running it
-
-Open VS Code, open your project folder, click the **Kilo Code** icon in the sidebar —
-your models are already there. That's it.
+It handles the whole boring part in one go. You double-click it, and it sets up **VS Code → Git → Node.js → Kilo Code → your API key**. Then you just open VS Code, open your folder, click Kilo Code, and you're building.
 
 ---
 
-## Default model
+## What it actually does
 
-`deepseek-v4.1-flash` — fast, cheap and plenty capable for the course.
+**It checks first, then installs.** If you already have VSCode, it skips it and leaves it alone. Same for Git and Node. Nothing gets reinstalled or overwritten, so if your machine is already set up for other stuff, it stays that way.
 
-You can change it during setup, or later: the wizard fetches the live model list from
-the gateway, so you pick from what actually exists right now. Your choice is remembered
-for next time.
+**Then it installs whatever's missing.** Windows uses `winget`, macOS uses `brew`, Linux figures out whether you're on Arch, Debian or Fedora and uses the right one. You don't have to know any of this — it just does it.
 
-| Model | Notes |
-|---|---|
-| `deepseek-v4.1-flash` | **default** |
-| `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano` | |
-| `gpt-5.5` | |
-| `gpt-5.6-luna`, `gpt-5.6-sol`, `gpt-5.6-terra` | |
-| `gpt-6-astra`, `gpt-6-luna`, `gpt-6-sol` | |
-| `gpt-image-2` | image generation |
+**Then Kilo Code gets installed into VSCode** so the extension is already there when you open the editor.
 
----
+**Then you paste your API key.** Hit *Test connection* and it pings the gateway for real — if the key is wrong you find out immediately, not halfway through a lesson. Once it connects, it pulls the live list of models so you can pick which one you want.
 
-## Where to get your API key
+![Connect your API key](docs/screenshots/03-models.png)
 
-Your **KrackedDevs profile dashboard** — <https://krackeddevs.com/dashboard/profile>
-(the wizard links straight to it).
+**Don't have a key yet?** There's a *Skip* button. It finishes the setup anyway and you can use Kilo Code's own free models in the meantime. Nothing breaks.
 
-Gateway: `https://litellm.rapidscreen.io/v1` (OpenAI-compatible).
+**Then it's done,** and it tells you exactly what to do next.
+
+![Setup complete](docs/screenshots/04-done.png)
 
 ---
 
-## For developers
+## Your API key
 
-### Prerequisites
+From your **KrackedDevs profile dashboard** — the installer links straight to it so you don't have to go hunting:
+<https://krackeddevs.com/dashboard/profile>
 
-- Rust (1.77+) — <https://rustup.rs>
-- Node.js 18+ (only for the Tauri CLI and UI tests)
-- Linux only: `webkit2gtk-4.1`, `base-devel`
+The gateway is `https://litellm.rapidscreen.io/v1`, OpenAI-compatible, so it works as a custom provider in Kilo Code.
 
-### Run it
+## Which model?
+
+The default is **`deepseek-v4.1-flash`** — it's fast and cheap and more than enough for the course. You can pick something else during setup and it remembers your choice next time. The list comes from the gateway live, so whatever's actually available right now is what you'll see.
+
+There's also `gpt-5.6-sol`, `gpt-6-astra`, `gpt-image-2` and plenty more if you want to poke around.
+
+---
+
+## Dark mode
+
+Because of course.
+
+![Dark theme](docs/screenshots/05-dark.png)
+
+---
+
+## If you're running it yourself
+
+Only three things to know: **Rust**, **Node 18+**, and on Linux also `webkit2gtk-4.1` and `base-devel`.
 
 ```bash
 npm install
-npm run dev            # live-reloading dev build
+npm run dev
 ```
 
-### Test it
-
-```bash
-npm run test:ui        # 31 headless UI tests (real browser, real flow)
-cd src-tauri
-cargo test             # 20 unit tests
-```
-
-Live integration tests hit the real gateway — they're `#[ignore]`d so they never run by
-accident:
-
-```bash
-AIBS_TEST_KEY=sk-... cargo test --test live -- --ignored --nocapture
-```
-
-Backend harness that drives the real install/verify/apply pipeline:
-
-```bash
-AIBS_TEST_KEY=sk-... cargo run --example harness             # dry run
-AIBS_TEST_KEY=sk-... cargo run --example harness -- --apply  # writes real config
-cargo run --example ext_check                                # VS Code extension step
-```
-
-### Build installers
+To build the installers:
 
 ```bash
 npm run build:linux    # .deb, .AppImage, .rpm
 npm run build:mac      # .dmg, .app
-npm run build:win      # .msi, .exe (NSIS)
+npm run build:win      # .msi, .exe
 ```
 
-> Cross-compiling: macOS and Windows bundles must be built **on** macOS and Windows
-> respectively (Tauri/WebKit requirement). Use the GitHub Actions workflow in
-> `.github/workflows/release.yml`, which builds all three on native runners.
+macOS and Windows bundles have to be built **on** macOS and Windows — that's a Tauri/WebKit thing, not something I can work around. There's a GitHub Actions workflow that builds all three on native runners.
 
----
+There's a test suite if you're poking at the code — `npm run test:ui` drives the whole flow in a real browser, and `cargo test` runs the Rust units. The live tests hit the real gateway, so they're opt-in:
 
-## How it works
-
+```bash
+cd src-tauri
+AIBS_TEST_KEY=sk-... cargo test --test live -- --ignored
 ```
-src-tauri/src/
-├── platform.rs   OS detection, package-manager commands, VS Code CLI discovery
-├── api.rs        live gateway client: key validation + model list
-├── kilo.rs       kilo.jsonc read/merge/write, credential store, env persistence
-├── steps.rs      the wizard's step orchestration (Tauri commands)
-└── lib.rs        command registration
-
-ui/
-├── index.html    the three screens
-├── app.css       AI Builder School design tokens
-├── app.js        flow logic
-└── icons.js      inline SVG icon set (no emoji, no icon fonts)
-```
-
-### Important implementation notes
-
-- **Kilo config lives at `~/.config/kilo/kilo.jsonc` on ALL platforms**, including
-  Windows (`C:\Users\<you>\.config\kilo\kilo.jsonc`). Not `%APPDATA%`.
-- **The API key is written inline** into the config. Kilo resolves `{env:VAR}` only if
-  the variable is already in the running process, so a GUI-launched VS Code would fail
-  to see a key we put in a shell profile. Inline just works. Pass `use_env: true` if you
-  want the placeholder instead.
-- **We write both `kilo.jsonc` and `auth.json`.** An inline key alone doesn't create
-  Kilo's auth-store entry, which makes its Settings UI show an empty key field
-  (Kilo issue #10139).
-- **Existing config is deep-merged and backed up** to `kilo.jsonc.bak` first.
-- **macOS `code` is not on PATH by default** — we resolve the app-bundle binary at
-  `/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code`.
-- **`/v1/models` requires a key** (401 without one), so models can only be listed
-  *after* the student enters theirs.
 
 ---
 
 ## Status
 
-Working and tested on **Linux (Arch/EndeavourOS)**. macOS and Windows bundle targets are
-configured and the platform code paths are written, pending real-machine verification.
-
-Verified end-to-end: a clean-environment Kilo CLI run (`env -i`, no key variable)
-successfully answered a prompt through the `aibs/deepseek-v4.1-flash` provider that the
-wizard wrote.
+**Tested on Linux** (Arch / EndeavourOS) — the installers build and the whole flow runs. macOS and Windows code paths are written and configured, but I haven't run them on real hardware yet, so those are still unverified.
 
 ---
 
-setup by [ar-Raqmi](https://ar-raqmi.net/)
+<div align="center">
+
+  *🖋️ the pen hasn't lifted*
+
+  setup by <a href="https://ar-raqmi.net/">ar-Raqmi</a>
+
+</div>
