@@ -1,4 +1,5 @@
 <div align="center">
+  <img src="assets/brand/icon-mono-1024.png" alt="AI Builder School" width="120">
   <h1>AI Builder School Installer</h1>
   <p><em>Press install, paste your API key, start vibe coding.</em></p>
 </div>
