@@ -3,13 +3,13 @@
   <p><em>Press install, paste your API key, start vibe coding.</em></p>
 </div>
 
-I've been enjoying entering the **AI Builder School**, but the problem I kept seeing is that we always waste so much time on the setup session instead of the actual coding. Every class someone's stuck on installing VSCode, or Git isn't on the PATH, or Kilo Code isn't connected, or the API key isn't working — and by the time everyone's sorted, half the session is gone.
+I've been enjoying entering the **AI Builder School**, but the problem I kept seeing is that we always waste so much time on the setup session instead of the actual coding. Every class someone's stuck on installing VSCode, or Git isn't on the PATH, or Kilo Code isn't connected or the API key isn't working and by the time everyone's sorted, half the session is gone. :<
 
 So I made this **AI Builder School Installer** :>
 
 ![System check](docs/screenshots/01-detect.png)
 
-It handles the whole boring part in one go. You double-click it, and it sets up **VS Code → Git → Node.js → Kilo Code → your API key**. Then you just open VS Code, open your folder, click Kilo Code, and you're building.
+It handles the whole boring part in one go. You double-click it, and it sets up **VS Code → Git → Node.js → Kilo Code → your API key**. Then you just open VS Code, open your folder, click Kilo Code and you're building.
 
 ---
 
@@ -44,7 +44,7 @@ The gateway is `https://litellm.rapidscreen.io/v1`, OpenAI-compatible, so it wor
 
 The default is **`deepseek-v4.1-flash`** — it's fast and cheap and more than enough for the course. You can pick something else during setup and it remembers your choice next time. The list comes from the gateway live, so whatever's actually available right now is what you'll see.
 
-There's also `gpt-5.6-sol`, `gpt-6-astra`, `gpt-image-2` and plenty more if you want to poke around.
+There's also `gpt-5.6-sol`, `gpt-6-astra`, `no-claude-models-bruh` and plenty more if you want to poke around.
 
 ---
 
