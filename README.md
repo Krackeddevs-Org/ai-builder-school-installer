@@ -8,6 +8,27 @@ I've been enjoying entering the **AI Builder School**, but the problem I kept se
 
 So I made this **AI Builder School Installer** :>
 
+## Download
+
+Grab the file for your machine from the [**Releases page**](../../releases/latest):
+
+| Your computer | Download |
+|---|---|
+| **Windows** | `.exe` (easiest) or `.msi` |
+| **macOS** | `.dmg` |
+| **Linux** | `.AppImage` — works on Arch, Ubuntu, Fedora, anything |
+
+> **Linux:** use the **AppImage**, not the `.deb`. The AppImage is self-contained so it
+> runs on any distro; the `.deb` is only for Debian/Ubuntu and the `.rpm` only for
+> Fedora. Make it executable and run it:
+> ```bash
+> chmod +x "AI Builder School Setup_0.1.0_amd64.AppImage"
+> ./"AI Builder School Setup_0.1.0_amd64.AppImage"
+> ```
+
+The builds aren't code-signed yet, so your OS may grumble the first time — [what to do
+about it](docs/RELEASING.md#code-signing-not-done-yet).
+
 ![System check](docs/screenshots/01-detect.png)
 
 It handles the whole boring part in one go. You double-click it, and it sets up **VS Code → Git → Node.js → Kilo Code → your API key**. Then you just open VS Code, open your folder, click Kilo Code and you're building.

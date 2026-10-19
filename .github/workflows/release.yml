@@ -16,9 +16,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Apple silicon
           - platform: macos-latest
-            args: "--bundles dmg,app"
-            label: macOS
+            args: "--target aarch64-apple-darwin --bundles dmg,app"
+            label: macOS (Apple silicon)
+          # Intel Macs — same runner, different target triple
+          - platform: macos-latest
+            args: "--target x86_64-apple-darwin --bundles dmg,app"
+            label: macOS (Intel)
           - platform: ubuntu-22.04
             args: "--bundles deb,appimage,rpm"
             label: Linux
@@ -56,6 +61,9 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          # macOS runners need BOTH targets so one runner can produce both DMGs.
+          targets: ${{ startsWith(matrix.platform, 'macos') && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Cache Rust build
         uses: swatinem/rust-cache@v2
@@ -63,7 +71,7 @@ jobs:
           workspaces: "./src-tauri -> target"
 
       - name: Install frontend dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
       - name: Run Rust unit tests
         working-directory: src-tauri

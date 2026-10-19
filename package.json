@@ -11,7 +11,9 @@
     "build:linux": "tauri build --bundles deb,appimage,rpm",
     "build:mac": "tauri build --bundles dmg,app",
     "build:win": "tauri build --bundles nsis,msi",
-    "screenshots": "node tests/capture-screenshots.mjs"
+    "screenshots": "node tests/capture-screenshots.mjs",
+    "build:local": "./scripts/build-local.sh",
+    "verify:appimage": "./scripts/verify-appimage.sh"
   },
   "devDependencies": {
     "playwright": "^1.49.0",
