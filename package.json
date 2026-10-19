@@ -5,6 +5,7 @@
   "description": "AI Builder School setup wizard",
   "type": "module",
   "scripts": {
+    "tauri": "tauri",
     "test:ui": "node tests/ui-flow.test.mjs",
     "dev": "tauri dev",
     "build": "tauri build",

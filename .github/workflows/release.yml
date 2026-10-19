@@ -41,9 +41,12 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
+          # NOTE: libappindicator3-dev and libayatana-appindicator3-dev CONFLICT on
+          # Ubuntu ("Unable to correct problems, you have held broken packages").
+          # Tauri 2 wants the ayatana fork, so we install only that one.
           sudo apt-get install -y \
             libwebkit2gtk-4.1-dev \
-            libappindicator3-dev \
+            libayatana-appindicator3-dev \
             librsvg2-dev \
             patchelf \
             build-essential \
@@ -51,8 +54,7 @@ jobs:
             wget \
             file \
             libxdo-dev \
-            libssl-dev \
-            libayatana-appindicator3-dev
+            libssl-dev
 
       - name: Setup Node
         uses: actions/setup-node@v4
