@@ -23,8 +23,7 @@ You can also trigger it by hand: **Actions → Release → Run workflow**.
 | Target | Built on | Can you cross-compile from Linux? |
 |---|---|---|
 | Linux `deb` / `rpm` / `AppImage` | `ubuntu-22.04` | ✅ Yes — it's the same OS |
-| Windows `nsis` (.exe) | `windows-latest` | ⚠️ Possible via `cargo-xwin`, not recommended |
-| Windows `msi` | `windows-latest` | ❌ **Impossible** — WiX only runs on Windows |
+| Windows `nsis` (`-setup.exe`) + plain `.exe` | `windows-latest` | ⚠️ Possible via `cargo-xwin`, not recommended |
 | macOS `dmg` / `app` | `macos-latest` | ❌ **Impossible** — needs the Apple SDK |
 
 Per Tauri's own docs, cross-compiling Windows from Linux *"should only be used as a last
@@ -32,6 +31,35 @@ resort if local VMs or CI solutions like GitHub Actions don't work for you."*
 
 **macOS cannot be done at all** from Linux, because the Apple SDK isn't redistributable.
 No tooling fixes that.
+
+## What a student downloads
+
+| OS | File | Notes |
+|---|---|---|
+| Windows | `aibs-setup_windows_x64.exe` | The portable exe: no "installer for the installer". `uploadPlainBinary: true` in the workflow publishes the raw `target/release` binary; tauri-action names it `<binary>_<platform>_<arch>.exe`, with no version. |
+| Windows (fallback) | `AI.Builder.School.Setup_<version>_x64-setup.exe` | NSIS. Use it if the portable exe won't open: it also installs WebView2 (`webviewInstallMode: downloadBootstrapper`). |
+| macOS | the Terminal one-liner (below) | Avoids Gatekeeper's prompt entirely. The `.dmg` still works but needs **Open Anyway**. |
+| Linux | `.AppImage` | See below. |
+
+The plain exe needs the WebView2 runtime, which ships with Windows 11 and current Windows 10.
+
+The MSI is no longer built, so students aren't left choosing between two Windows installers.
+
+### macOS one-liner
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ar-Raqmi/ai-builder-school-installer/master/scripts/install-mac.sh | bash
+```
+
+`scripts/install-mac.sh` downloads the stable-named tarball
+(`AI.Builder.School.Setup_{aarch64,x64}.app.tar.gz`) from `releases/latest/download/`,
+unpacks it into `/Applications` (or `~/Applications` when that isn't writable; it never
+uses `sudo`) and opens it. Gatekeeper only assesses files that carry the
+`com.apple.quarantine` attribute. Browsers add it to downloads; `curl` does not, and `tar`
+does not copy it out of an archive, so the app opens with no prompt.
+
+It reads from `master` and from the latest *published* Release, so a draft Release is
+invisible to it until you publish.
 
 ## Which Linux file should a student download?
 
@@ -64,7 +92,7 @@ Or the npm shortcuts:
 ```bash
 npm run build:linux
 npm run build:mac
-npm run build:win     # must be run ON Windows
+npm run build:win     # must be run ON Windows (-setup.exe; the plain .exe is in target/release)
 ```
 
 ## Code signing
@@ -76,16 +104,18 @@ can't be opened"* — which reads as malware to a student. Tauri's own docs name
 setting for that case.
 
 Ad-hoc signing fixes the "damaged" hard failure. It does **not** make the app trusted, so
-first launch still hits Gatekeeper:
+a browser-downloaded copy still hits Gatekeeper:
 
-- **macOS** — right-click the app → **Open** → **Open**. Or:
-  `xattr -d com.apple.quarantine "/Applications/AI Builder School Setup.app"`
+- **macOS** — *"Apple could not verify 'AI Builder School Setup'…"*. Since Sequoia 15 the
+  old right-click → Open bypass is gone. The student has to click **Done**, then go to
+  System Settings → Privacy & Security → Security → **Open Anyway** → password (Touch ID
+  works). That is why the README leads with the Terminal one-liner, which skips the
+  prompt. (`xattr -dr com.apple.quarantine "/Applications/AI Builder School Setup.app"`
+  also works on a `.dmg` install.)
 - **Windows** — SmartScreen shows "Windows protected your PC" → *More info* → *Run anyway*.
 
-> On macOS, the plain *right-click → Open* path does **not** work when the app is
-> reported as damaged — only when Gatekeeper is merely "unverified". A correctly
-> ad-hoc-signed build takes the second path. If a student still sees "damaged", the
-> signature is missing or broken, not merely untrusted.
+> If a student still sees "damaged", the signature is missing or broken, not merely
+> untrusted.
 
 Removing these prompts entirely needs a paid identity:
 
@@ -94,14 +124,17 @@ Removing these prompts entirely needs a paid identity:
 | macOS | Apple Developer Program, then set `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` as repo secrets | $99/year |
 | Windows | EV code-signing certificate | a few hundred/year |
 
-For a classroom the ad-hoc route plus clear instructions is usually acceptable. Revisit if
-students start bouncing off it.
+The only zero-prompt, long-term fix on macOS is Apple Developer ID signing **plus
+notarization** (~$99/year). The one-liner is a workaround, not a substitute. For a
+classroom, ad-hoc signing plus the one-liner and clear instructions is usually acceptable;
+revisit if students start bouncing off it.
 
 ## Release checklist
 
-1. Bump `version` in `src-tauri/tauri.conf.json` **and** `package.json` (keep them equal).
+1. Bump `version` in `src-tauri/tauri.conf.json`, `package.json` **and** `src-tauri/Cargo.toml` (keep them equal).
 2. Commit, then tag and push the tag.
 3. Wait for all four runners to go green.
 4. Publish the draft Release.
 5. Download the AppImage yourself and run `scripts/verify-appimage.sh` on it.
-6. Hand students **one** link — the Releases page.
+6. Hand students **one** link — the Releases page. The release body already names the
+   right file per OS (portable `.exe`, the macOS one-liner, the `.AppImage`).

@@ -14,27 +14,47 @@ Grab the file for your machine from the [**Releases page**](../../releases/lates
 
 | Your computer | Download |
 |---|---|
-| **Windows** | `.exe` (easiest) or `.msi` |
-| **macOS** | `.dmg` |
+| **Windows** | `aibs-setup_windows_x64.exe` (portable, just double-click) |
+| **macOS** | the Terminal one-liner below (or the `.dmg`) |
 | **Linux** | `.AppImage` — works on Arch, Ubuntu, Fedora, anything |
 
-> **Linux:** use the **AppImage**, not the `.deb`. The AppImage is self-contained so it
-> runs on any distro; the `.deb` is only for Debian/Ubuntu and the `.rpm` only for
-> Fedora. Make it executable and run it:
-> ```bash
-> chmod +x "AI Builder School Setup_0.1.0_amd64.AppImage"
-> ./"AI Builder School Setup_0.1.0_amd64.AppImage"
-> ```
+### Windows
 
-The builds are ad-hoc signed, not notarized, so your OS may warn you the first time:
+Double-click `aibs-setup_windows_x64.exe`. There's nothing to install first, it just runs. Windows might say "Windows protected your PC" because I don't have a paid code-signing certificate — **More info** → **Run anyway**.
 
-- **macOS** — right-click the app → **Open** → **Open**, or:
-  ```
-  xattr -d com.apple.quarantine "/Applications/AI Builder School Setup.app"
-  ```
-  (If you see *"is damaged and can't be opened"* instead, that build is missing its
-  signature — tell me, don't work around it.)
-- **Windows** — "Windows protected your PC" → **More info** → **Run anyway**
+It needs the WebView2 runtime, which Windows 11 and current Windows 10 already have. If the portable exe doesn't open, use the `-setup.exe` instead — it installs WebView2.
+
+### macOS
+
+The app isn't notarized (that needs Apple's paid $99/year developer program), so macOS doesn't know who I am and has opinions about that. Two ways around it:
+
+**Option A (recommended, no security prompts).** Open Terminal and paste:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ar-Raqmi/ai-builder-school-installer/master/scripts/install-mac.sh | bash
+```
+
+It downloads the app, puts it in `/Applications` (or `~/Applications` if that's locked) and opens it. macOS only gets suspicious of files that came through a browser, and `curl` isn't one, so it never asks.
+
+**Option B (the `.dmg`).** Drag the app to Applications and double-click it. It says *"Apple could not verify 'AI Builder School Setup'…"* — click **Done**, then:
+
+1. Open **System Settings**
+2. Go to **Privacy & Security**
+3. Scroll down to **Security**
+4. Under "Allow applications from" select **App Store & Known Developers**
+5. Next to *"'AI Builder School Setup' was blocked to protect your Mac."* click **Open Anyway**
+6. Enter your password (Touch ID works too) → **Open**
+
+Only needed once. The old right-click → Open trick stopped working in macOS Sequoia 15, so don't bother with it.
+
+### Linux
+
+Use the **AppImage**, not the `.deb`. The AppImage is self-contained so it runs on any distro; the `.deb` is only for Debian/Ubuntu and the `.rpm` only for Fedora. Make it executable and run it:
+
+```bash
+chmod +x "AI Builder School Setup_0.1.3_amd64.AppImage"
+./"AI Builder School Setup_0.1.3_amd64.AppImage"
+```
 
 ![System check](docs/screenshots/01-detect.png)
 
@@ -99,7 +119,7 @@ To build the installers:
 ```bash
 npm run build:linux    # .deb, .AppImage, .rpm
 npm run build:mac      # .dmg, .app
-npm run build:win      # .msi, .exe
+npm run build:win      # -setup.exe (the plain .exe is in target/release)
 ```
 
 macOS and Windows bundles have to be built **on** macOS and Windows — that's a Tauri/WebKit thing, not something I can work around. There's a GitHub Actions workflow that builds all three on native runners.
@@ -115,7 +135,7 @@ AIBS_TEST_KEY=sk-... cargo test --test live -- --ignored
 
 ## Status
 
-**Tested on Linux** (Arch / EndeavourOS) — the installers build and the whole flow runs. macOS and Windows code paths are written and configured, but I haven't run them on real hardware yet, so those are still unverified.
+**Tested on Linux** (Arch / EndeavourOS) and **macOS** (Apple silicon) — the app builds, opens and runs its system check there. The **Windows** code paths (winget, PATH refresh, the portable exe) are written and covered by unit tests, but I haven't run the app on a real Windows machine yet, so treat those as unverified. If something breaks there, tell me.
 
 ---
 

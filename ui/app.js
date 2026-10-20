@@ -17,9 +17,17 @@ const openUrl = (() => {
   return (url) => Promise.resolve(window.open(url, "_blank", "noopener"));
 })();
 
+/* Live installer output arrives as events from the Rust side while the install command is
+ * still running. */
+const listen = (window.__TAURI__ && window.__TAURI__.event && window.__TAURI__.event.listen) || null;
+
 const DEMO = !invoke;
 const BASE_URL = "https://litellm.rapidscreen.io/v1";
 const PREF_KEY = "aibs.preferredModel";
+const PROGRESS_EVENT = "install-progress";
+const PROGRESS_FLUSH_MS = 100;   // a fast-redrawing installer must not flood the webview
+const HINT_AFTER_MS = 20000;
+const HINT_TEXT = "This can take a few minutes — the installer is still working.";
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls) => { const n = document.createElement(tag); if (cls) n.className = cls; return n; };
@@ -45,6 +53,57 @@ function log(msg, kind) {
   line.textContent = msg;
   box.appendChild(line);
   box.scrollTop = box.scrollHeight;
+}
+
+/* ── live installer output ─────────────────────────────────────────────── */
+let pending = [];
+let flushTimer = null;
+let liveTimer = null;
+
+function onProgress(p) {
+  // Redraws (progress bars) only matter as the latest one, so a burst collapses to one line.
+  const last = pending[pending.length - 1];
+  if (p.transient && last && last.transient && last.id === p.id) pending[pending.length - 1] = p;
+  else pending.push(p);
+  if (!flushTimer) flushTimer = setTimeout(flushProgress, PROGRESS_FLUSH_MS);
+}
+
+/* Redraws show under the running step; everything else also joins the log. */
+function flushProgress() {
+  clearTimeout(flushTimer);
+  flushTimer = null;
+  const batch = pending;
+  pending = [];
+  batch.forEach(({ id, line, transient }) => {
+    if (!transient) log("   " + line);
+    const t = state.tasks[id];
+    if (t && t.status === "running") t.line = line;
+  });
+  if (batch.length) tickLive();
+}
+
+function fmtElapsed(ms) {
+  const s = Math.floor(ms / 1000);
+  return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+}
+
+/* Updates the running row in place; rebuilding it would restart the spinner every tick. */
+function tickLive() {
+  document.querySelectorAll("#taskRows .task.running").forEach((row) => {
+    const t = state.tasks[row.dataset.id];
+    const live = row.querySelector(".live");
+    if (!t || !t.startedAt || !live) return;
+    const ms = Date.now() - t.startedAt;
+    row.querySelector(".meta").textContent = t.detail + " " + fmtElapsed(ms);
+    live.querySelector(".line").textContent = t.line || "";
+    live.querySelector(".hint").classList.toggle("hidden", ms < HINT_AFTER_MS);
+  });
+}
+
+function syncLiveTimer() {
+  const timing = Object.values(state.tasks).some((t) => t.status === "running" && t.startedAt);
+  if (timing && !liveTimer) liveTimer = setInterval(tickLive, 1000);
+  if (!timing && liveTimer) { clearInterval(liveTimer); liveTimer = null; }
 }
 
 /* ── theme ─────────────────────────────────────────────────────────────── */
@@ -109,7 +168,8 @@ function renderTasks() {
   const order = ["vscode", "git", "node", "kilo"];
   order.forEach((id) => {
     const t = state.tasks[id] || { status: "idle" };
-    const row = el("div", "task");
+    const row = el("div", "task" + (t.status === "running" ? " running" : ""));
+    row.dataset.id = id;
     const tick = el("span", "tick " + (t.status === "done" ? "done" : t.status === "skipped" ? "skip" : t.status === "running" ? "run" : t.status === "failed" ? "err" : "idle"));
     if (t.status === "done") tick.innerHTML = icon("check", 12);
     else if (t.status === "skipped") tick.innerHTML = icon("skip", 12);
@@ -120,6 +180,14 @@ function renderTasks() {
     const meta = el("span", "meta"); meta.textContent = t.detail || "";
     meta.title = t.detail || "";
     row.appendChild(tick); row.appendChild(nm); row.appendChild(meta);
+    if (t.status === "running" && t.startedAt) {
+      const live = el("div", "live");
+      const hint = el("span", "hint hidden");
+      hint.textContent = HINT_TEXT;
+      live.appendChild(el("span", "line"));
+      live.appendChild(hint);
+      row.appendChild(live);
+    }
     wrap.appendChild(row);
   });
   // overall badge
@@ -129,9 +197,13 @@ function renderTasks() {
   else if (vals.some((v) => v === "running")) { badge.className = "badge run"; badge.innerHTML = '<span>working</span><span></span>'; }
   else if (vals.every((v) => v === "done" || v === "skipped")) { badge.className = "badge ok"; badge.innerHTML = icon("check", 12) + "<span>ready</span>"; }
   else { badge.className = "badge idle"; badge.innerHTML = "<span>ready to install</span>"; }
-  // progress bar
+  // progress bar: a running step counts as half done, and the bar shimmers while work is live
   const doneCount = vals.filter((v) => v === "done" || v === "skipped").length;
-  $("progBar").style.width = Math.round((doneCount / order.length) * 100) + "%";
+  const runningCount = vals.filter((v) => v === "running").length;
+  $("progBar").style.width = Math.round(((doneCount + runningCount / 2) / order.length) * 100) + "%";
+  $("progBar").parentElement.classList.toggle("working", runningCount > 0);
+  syncLiveTimer();
+  tickLive();
 }
 
 /* ── detection ─────────────────────────────────────────────────────────── */
@@ -182,6 +254,30 @@ function renderManual() {
 }
 
 /* ── install ───────────────────────────────────────────────────────────── */
+function startStep(id, detail) {
+  setTask(id, { status: "running", detail, startedAt: Date.now(), line: "" });
+  renderTasks();
+}
+
+function finishStep(id, res) {
+  flushProgress();   // output that arrived before the result belongs above it in the log
+  setTask(id, { status: res.status, detail: res.detail, startedAt: null, line: "" });
+  renderTasks();
+}
+
+/* Browser preview has no installer to stream from, so feed the same path some fake output. */
+const DEMO_OUTPUT = {
+  kilo: [["Resolving kilocode.Kilo-Code…", false], ["Downloading extension… 30%", true], ["Downloading extension… 80%", true], ["Installing extension…", false]],
+  tool: [["Resolving packages…", false], ["Downloading… 20%", true], ["Downloading… 65%", true], ["Installing…", false]],
+};
+async function demoInstall(id, ms) {
+  const lines = DEMO_OUTPUT[id] || DEMO_OUTPUT.tool;
+  for (const [line, transient] of lines) {
+    await new Promise((r) => setTimeout(r, ms / lines.length));
+    onProgress({ id, line, transient });
+  }
+}
+
 async function installAll() {
   $("btnInstall").disabled = true;
   $("btnRecheck").disabled = true;
@@ -192,20 +288,18 @@ async function installAll() {
     if (t.status === "skipped" || t.status === "done") { log("• " + (t.label || id) + " — already present, skipped"); continue; }
     if (t.status === "manual") { log("! " + (t.label || id) + " — needs a manual step", "er"); continue; }
 
-    setTask(id, { status: "running", detail: "installing…" });
-    renderTasks();
+    startStep(id, "installing…");
     log("→ installing " + (t.label || id));
 
     let res;
     if (DEMO) {
-      await new Promise((r) => setTimeout(r, 900));
+      await demoInstall(id, 900);
       res = { ok: true, status: "done", detail: "installed", command: t.command };
     } else {
       try { res = await invoke("install_tool", { id, dryRun: false }); }
       catch (e) { res = { ok: false, status: "failed", detail: String(e) }; }
     }
-    setTask(id, { status: res.status, detail: res.detail });
-    renderTasks();
+    finishStep(id, res);
     log((res.ok ? "✓ " : "✗ ") + (t.label || id) + " — " + res.detail, res.ok ? "ok" : "er");
     if (res.status === "manual") renderManual();
   }
@@ -220,19 +314,17 @@ async function installAll() {
     return;
   }
 
-  setTask("kilo", { status: "running", detail: "installing extension…" });
-  renderTasks();
+  startStep("kilo", "installing extension…");
   log("→ installing the Kilo Code extension");
   let ext;
   if (DEMO) {
-    await new Promise((r) => setTimeout(r, 800));
+    await demoInstall("kilo", 800);
     ext = { ok: true, status: "done", detail: "Kilo Code installed" };
   } else {
     try { ext = await invoke("install_extension", { dryRun: false }); }
     catch (e) { ext = { ok: false, status: "failed", detail: String(e) }; }
   }
-  setTask("kilo", { status: ext.status, detail: ext.detail });
-  renderTasks();
+  finishStep("kilo", ext);
   log((ext.ok ? "✓ " : "✗ ") + "Kilo Code — " + ext.detail, ext.ok ? "ok" : "er");
 
   finishEnvPhase(ext.ok);
@@ -609,5 +701,6 @@ window.addEventListener("DOMContentLoaded", () => {
   $("btnOpenCode").addEventListener("click", busy($("btnOpenCode"), () => openCode()));
   $("btnOpenFolder").addEventListener("click", busy($("btnOpenFolder"), openFolder));
   $("apiKey").addEventListener("keydown", (e) => { if (e.key === "Enter") ping(); });
+  if (listen) listen(PROGRESS_EVENT, (ev) => onProgress(ev.payload));
   detect();
 });

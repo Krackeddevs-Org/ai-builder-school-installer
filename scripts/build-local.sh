@@ -3,7 +3,7 @@
 #
 # What this can and cannot do:
 #   Linux  -> deb, rpm, AppImage   (YES, natively)
-#   Windows -> msi, nsis           (NO  — .msi needs WiX, which only runs on Windows)
+#   Windows -> nsis                (NO  — build it on Windows; cross-compiling is a last resort)
 #   macOS  -> dmg, app             (NO  — needs the Apple SDK, not redistributable)
 #
 # For Windows/macOS use the GitHub Actions workflow (.github/workflows/release.yml),

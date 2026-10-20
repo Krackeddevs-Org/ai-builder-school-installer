@@ -4,6 +4,8 @@ use crate::api;
 use crate::kilo;
 use crate::platform::{self, CmdSpec, Os, Probe, Tool};
 use serde::Serialize;
+use std::time::{Duration, Instant};
+use tauri::{AppHandle, Emitter};
 
 pub const KILO_EXTENSION_ID: &str = "kilocode.Kilo-Code";
 
@@ -23,6 +25,70 @@ pub struct DetectionReport {
     pub steps: Vec<StepState>,
 }
 
+/// Event the UI listens to for live output from the step that is running.
+const PROGRESS_EVENT: &str = "install-progress";
+
+/// Redrawn lines (progress bars) can arrive hundreds of times a second; the webview only
+/// needs a few a second to look alive.
+const TRANSIENT_EVERY: Duration = Duration::from_millis(100);
+
+#[derive(Clone, Serialize)]
+struct ProgressLine<'a> {
+    id: &'a str,
+    line: &'a str,
+    /// Redrawn in place by the tool: show it under the step, don't keep it in the log.
+    transient: bool,
+}
+
+/// Lets an event through at most once per `every`.
+struct Throttle {
+    every: Duration,
+    last: Option<Instant>,
+}
+
+impl Throttle {
+    fn ready(&mut self, now: Instant) -> bool {
+        if self.last.is_some_and(|t| now.duration_since(t) < self.every) {
+            return false;
+        }
+        self.last = Some(now);
+        true
+    }
+}
+
+/// Forwards one step's output to the UI as `install-progress` events.
+struct ProgressEmitter {
+    app: AppHandle,
+    id: String,
+    throttle: Throttle,
+}
+
+impl ProgressEmitter {
+    fn new(app: AppHandle, id: &str) -> Self {
+        ProgressEmitter {
+            app,
+            id: id.to_string(),
+            throttle: Throttle {
+                every: TRANSIENT_EVERY,
+                last: None,
+            },
+        }
+    }
+
+    /// Real log lines always go through; only redraws are thinned out.
+    fn emit(&mut self, line: &str, transient: bool) {
+        if transient && !self.throttle.ready(Instant::now()) {
+            return;
+        }
+        let payload = ProgressLine {
+            id: &self.id,
+            line,
+            transient,
+        };
+        let _ = self.app.emit(PROGRESS_EVENT, payload);
+    }
+}
+
 fn os_label() -> String {
     match Os::current() {
         Os::Windows => "Windows".into(),
@@ -32,7 +98,7 @@ fn os_label() -> String {
 }
 
 /// Probe all three tools and report what would happen. Read-only; safe to call on start.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn detect() -> DetectionReport {
     let mut steps = Vec::new();
     for tool in [Tool::Vscode, Tool::Git, Tool::Node] {
@@ -128,9 +194,23 @@ pub struct RunResult {
 }
 
 /// Execute the install command for one tool, then re-probe.
-#[tauri::command]
-pub fn install_tool(id: String, dry_run: bool) -> RunResult {
-    let tool = match id.as_str() {
+///
+/// `async` only moves this onto a worker thread: a plain command runs on the main thread,
+/// where a multi-minute winget/brew run would freeze the window.
+#[tauri::command(async)]
+pub fn install_tool(app: AppHandle, id: String, dry_run: bool) -> RunResult {
+    let mut progress = ProgressEmitter::new(app, &id);
+    install_tool_streaming(&id, dry_run, &mut |line, t| progress.emit(line, t))
+}
+
+/// `install_tool` with the output delivered to `on_line(line, transient)`, so it can run
+/// without a window.
+pub fn install_tool_streaming(
+    id: &str,
+    dry_run: bool,
+    on_line: &mut dyn FnMut(&str, bool),
+) -> RunResult {
+    let tool = match id {
         "vscode" => Tool::Vscode,
         "git" => Tool::Git,
         "node" => Tool::Node,
@@ -183,7 +263,7 @@ pub fn install_tool(id: String, dry_run: bool) -> RunResult {
     // A fresh Mac has no Homebrew. Install it first; if that can't be done unattended,
     // say why and fall back to manual rather than failing opaquely.
     let cmd = if bootstrap.is_some() {
-        if let Err(reason) = platform::ensure_brew() {
+        if let Err(reason) = platform::ensure_brew(on_line) {
             return RunResult {
                 ok: false,
                 status: "manual".into(),
@@ -197,7 +277,7 @@ pub fn install_tool(id: String, dry_run: bool) -> RunResult {
         cmd
     };
 
-    match cmd.run() {
+    match cmd.run_streaming(on_line) {
         Ok(_) => {
             let after = platform::probe(tool);
             RunResult {
@@ -228,8 +308,17 @@ pub fn install_tool(id: String, dry_run: bool) -> RunResult {
 }
 
 /// Install the Kilo Code extension.
-#[tauri::command]
-pub fn install_extension(dry_run: bool) -> RunResult {
+#[tauri::command(async)]
+pub fn install_extension(app: AppHandle, dry_run: bool) -> RunResult {
+    let mut progress = ProgressEmitter::new(app, "kilo");
+    install_extension_streaming(dry_run, &mut |line, t| progress.emit(line, t))
+}
+
+/// `install_extension` with the output delivered to `on_line(line, transient)`.
+pub fn install_extension_streaming(
+    dry_run: bool,
+    on_line: &mut dyn FnMut(&str, bool),
+) -> RunResult {
     let code = match platform::find_code_cli() {
         Some(c) => c,
         None => {
@@ -253,7 +342,7 @@ pub fn install_extension(dry_run: bool) -> RunResult {
             command: Some(cmd.display),
         };
     }
-    match cmd.run() {
+    match cmd.run_streaming(on_line) {
         Ok(_) => RunResult {
             ok: true,
             status: "done".into(),
@@ -279,7 +368,7 @@ pub struct VerifyOutcome {
 }
 
 /// PING the gateway with the supplied key and return the model list.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn verify_key(
     api_key: String,
     base_url: Option<String>,
@@ -317,7 +406,7 @@ pub struct ApplyOutcome {
 
 /// Write the Kilo config + credentials. `api_key` may be empty when the student
 /// chooses to skip and use Kilo's own free models.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn apply_config(
     api_key: Option<String>,
     models: Vec<String>,
@@ -411,7 +500,7 @@ pub fn apply_config(
 }
 
 /// Open VS Code so the student can immediately click the Kilo Code icon.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn open_vscode(folder: Option<String>) -> RunResult {
     let code = match platform::find_code_cli() {
         Some(c) => c,
@@ -441,5 +530,55 @@ pub fn open_vscode(folder: Option<String>) -> RunResult {
             detail: e,
             command: Some(cmd.display),
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn throttle_lets_the_first_event_through() {
+        let mut t = Throttle {
+            every: Duration::from_millis(100),
+            last: None,
+        };
+        assert!(t.ready(Instant::now()));
+    }
+
+    #[test]
+    fn throttle_drops_events_inside_the_window_and_resumes_after() {
+        let start = Instant::now();
+        let mut t = Throttle {
+            every: Duration::from_millis(100),
+            last: None,
+        };
+        assert!(t.ready(start));
+        assert!(!t.ready(start + Duration::from_millis(40)));
+        assert!(!t.ready(start + Duration::from_millis(99)));
+        assert!(t.ready(start + Duration::from_millis(100)));
+        assert!(!t.ready(start + Duration::from_millis(150)));
+    }
+
+    #[test]
+    fn progress_line_serialises_the_shape_the_ui_reads() {
+        let json = serde_json::to_value(ProgressLine {
+            id: "git",
+            line: "45%",
+            transient: true,
+        })
+        .unwrap();
+        assert_eq!(json["id"], "git");
+        assert_eq!(json["line"], "45%");
+        assert_eq!(json["transient"], true);
+    }
+
+    #[test]
+    fn unknown_tool_fails_cleanly_without_running_anything() {
+        let mut lines = 0;
+        let r = install_tool_streaming("nonsense", false, &mut |_, _| lines += 1);
+        assert!(!r.ok);
+        assert_eq!(r.status, "failed");
+        assert_eq!(lines, 0);
     }
 }

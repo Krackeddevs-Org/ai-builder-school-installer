@@ -114,6 +114,8 @@ const run = async () => {
   const logText = await page.locator("#logBox").innerText();
   check("activity log recorded the work", logText.length > 20, logText.slice(0, 60));
   check("log mentions Kilo Code", /Kilo/i.test(logText), logText.slice(0, 120));
+  check("demo install streams simulated output lines into the log", /Resolving packages/.test(logText), logText.slice(0, 200));
+  check("demo redraw lines (progress %) stay out of the log", !/\d+%/.test(logText), logText.slice(0, 200));
 
   await shot(page, "02-api-step");
 

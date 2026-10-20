@@ -25,14 +25,14 @@ fn main() {
     }
 
     println!("\n=== 2. dry-run install for a missing tool ===");
-    let dry = steps::install_tool("node".into(), true);
+    let dry = steps::install_tool_streaming("node", true, &mut |_, _| {});
     println!(
         "  ok={} status={} detail={}",
         dry.ok, dry.status, dry.detail
     );
 
     println!("\n=== 3. install_extension() dry-run ===");
-    let ext = steps::install_extension(true);
+    let ext = steps::install_extension_streaming(true, &mut |_, _| {});
     println!(
         "  ok={} status={} detail={}",
         ext.ok, ext.status, ext.detail

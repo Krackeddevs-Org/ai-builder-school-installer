@@ -5,6 +5,7 @@ api.env
 
 # Rust
 /target/
+/src-tauri/target/
 **/*.rs.bk
 
 # Node / frontend

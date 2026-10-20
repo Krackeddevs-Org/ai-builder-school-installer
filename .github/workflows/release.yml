@@ -27,9 +27,12 @@ jobs:
           - platform: ubuntu-22.04
             args: "--bundles deb,appimage,rpm"
             label: Linux
+          # The plain exe (aibs-setup_windows_x64.exe) is what students download; the NSIS
+          # -setup.exe stays as the fallback because it also installs WebView2.
           - platform: windows-latest
-            args: "--bundles nsis,msi"
+            args: "--bundles nsis"
             label: Windows
+            plain_binary: true
 
     runs-on: ${{ matrix.platform }}
     name: Build (${{ matrix.label }})
@@ -90,9 +93,22 @@ jobs:
             One-click setup for AI Builder School students.
 
             Installs VS Code, Git, Node.js and the Kilo Code extension, then configures
-            your API key. Download the installer for your platform below.
+            your API key. Pick the one for your computer:
 
-            **Windows:** `.msi` or `.exe` · **macOS:** `.dmg` · **Linux:** `.deb`, `.rpm`, `.AppImage`
+            **Windows:** `aibs-setup_windows_x64.exe` — portable, just double-click it (recommended).
+            If it doesn't open, use the `-setup.exe` instead; it also installs WebView2.
+
+            **macOS:** open Terminal and paste this (no security prompts):
+
+            ```
+            curl -fsSL https://raw.githubusercontent.com/ar-Raqmi/ai-builder-school-installer/master/scripts/install-mac.sh | bash
+            ```
+
+            The `.dmg` works too, but macOS will say it "could not verify" the app. Click Done, then
+            System Settings → Privacy & Security → scroll to Security → **Open Anyway**.
+
+            **Linux:** the `.AppImage` (`chmod +x` it, then run it). Ignore the `.deb` and `.rpm`.
           releaseDraft: true
           prerelease: false
+          uploadPlainBinary: ${{ matrix.plain_binary || false }}
           args: ${{ matrix.args }}

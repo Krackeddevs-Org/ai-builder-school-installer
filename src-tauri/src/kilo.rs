@@ -265,7 +265,7 @@ pub fn write_auth(api_key: &str) -> Result<PathBuf, ConfigError> {
 pub fn persist_env_var(api_key: &str) -> Result<String, String> {
     #[cfg(target_os = "windows")]
     {
-        let out = std::process::Command::new("setx")
+        let out = crate::platform::command("setx")
             .args([API_KEY_ENV, api_key])
             .output()
             .map_err(|e| format!("setx failed: {e}"))?;

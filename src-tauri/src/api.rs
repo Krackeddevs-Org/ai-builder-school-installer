@@ -34,7 +34,7 @@ fn http_get(url: &str, api_key: &str) -> Result<(u16, String), String> {
     // Minimal HTTP over a child process keeps the dependency surface tiny AND avoids
     // TLS/openssl build requirements on every student machine. curl ships on Windows 10+,
     // macOS and virtually every Linux, and we fall back to a pure-Rust path if absent.
-    let out = std::process::Command::new("curl")
+    let out = crate::platform::command("curl")
         .args([
             "-sS",
             "-m",

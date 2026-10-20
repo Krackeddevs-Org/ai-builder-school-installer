@@ -25,7 +25,7 @@ fn main() {
     println!("Kilo Code installed before: {before}");
 
     println!("\n--- install_extension(dry_run = true) ---");
-    let dry = steps::install_extension(true);
+    let dry = steps::install_extension_streaming(true, &mut |_, _| {});
     println!(
         "  ok={} status={} detail={}",
         dry.ok, dry.status, dry.detail
@@ -37,7 +37,7 @@ fn main() {
         .contains("kilocode.Kilo-Code"));
 
     println!("\n--- install_extension(dry_run = false) ---");
-    let real = steps::install_extension(false);
+    let real = steps::install_extension_streaming(false, &mut |l, t| println!("  [{}] {l}", if t { "live" } else { "line" }));
     println!(
         "  ok={} status={} detail={}",
         real.ok, real.status, real.detail
@@ -51,7 +51,7 @@ fn main() {
     );
 
     println!("\n--- install_tool for an already-present tool must skip ---");
-    let git = steps::install_tool("git".into(), false);
+    let git = steps::install_tool_streaming("git", false, &mut |_, _| {});
     println!(
         "  ok={} status={} detail={}",
         git.ok, git.status, git.detail
@@ -59,7 +59,7 @@ fn main() {
     assert_eq!(git.status, "skipped");
 
     println!("\n--- install_tool with an unknown id must fail cleanly ---");
-    let bogus = steps::install_tool("nonsense".into(), false);
+    let bogus = steps::install_tool_streaming("nonsense", false, &mut |_, _| {});
     println!(
         "  ok={} status={} detail={}",
         bogus.ok, bogus.status, bogus.detail

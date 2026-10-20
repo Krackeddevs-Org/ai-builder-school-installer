@@ -99,6 +99,7 @@ h1{font-size:22px;font-weight:800;letter-spacing:-.02em;line-height:1.25;margin-
 .task{display:flex;align-items:center;gap:10px;padding:9px 0;font-size:12.5px;color:var(--paper-ink);
   border-bottom:1px solid var(--surface-raised)}
 .task:last-child{border-bottom:0;padding-bottom:0}
+.task{flex-wrap:wrap}
 .tick{width:17px;height:17px;flex:none;display:grid;place-items:center;
   clip-path:polygon(0 0,calc(100% - 5px) 0,100% 5px,100% 100%,0 100%)}
 .tick svg{width:12px;height:12px}
@@ -115,6 +116,12 @@ h1{font-size:22px;font-weight:800;letter-spacing:-.02em;line-height:1.25;margin-
   border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.spin{animation-duration:2s}}
+
+/* live output under the running step */
+.task .live{flex-basis:100%;min-width:0;padding-left:27px;font-size:11px;line-height:1.5;color:var(--fg-muted)}
+.task .live .line{display:block;min-height:1.5em;font-family:var(--font-mono);font-size:10.5px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.task .live .hint{display:block;color:var(--fg-faint)}
 
 /* fields */
 .fields{display:flex;flex-direction:column;gap:11px;margin-bottom:13px}
@@ -219,8 +226,16 @@ h1{font-size:22px;font-weight:800;letter-spacing:-.02em;line-height:1.25;margin-
 
 /* progress */
 .progress{height:3px;background:var(--surface-raised);overflow:hidden;margin-bottom:2px}
-.progress i{display:block;height:100%;width:0;background:var(--accent);
+.progress i{display:block;position:relative;overflow:hidden;height:100%;width:0;background:var(--accent);
   transition:width var(--motion-page) var(--ease-out)}
+/* indeterminate shimmer while a step is running */
+.progress.working i::after{content:"";position:absolute;inset:0;transform:translateX(-100%);
+  background:linear-gradient(90deg,transparent,var(--accent-ink),transparent);opacity:.55;
+  animation:shimmer 1.2s ease-in-out infinite}
+@keyframes shimmer{to{transform:translateX(100%)}}
+@media (prefers-reduced-motion:reduce){
+  .progress.working i::after{animation:none;transform:none;opacity:.25}
+}
 
 /* log */
 .log{font-family:var(--font-mono);font-size:10.5px;line-height:1.75;color:var(--fg-muted);
