@@ -443,8 +443,8 @@ pub(crate) fn command(program: impl AsRef<OsStr>) -> Command {
 /// `root` only so tests can point it at a temp dir.
 fn brew_candidates(root: &Path) -> [PathBuf; 2] {
     [
-        root.join("opt/homebrew/bin/brew"),
-        root.join("usr/local/bin/brew"),
+        under(root, "opt/homebrew/bin/brew"),
+        under(root, "usr/local/bin/brew"),
     ]
 }
 
@@ -577,6 +577,17 @@ pub fn find_code_cli() -> Option<String> {
         .into_iter()
         .find(|p| p.exists())
         .map(|p| p.to_string_lossy().to_string())
+}
+
+/// `rel` with `/` separators appended to `root` as real path components.
+///
+/// `Path::join("opt/homebrew/bin/brew")` appends the argument verbatim, so the slashes
+/// survive into the resulting path. On Windows that string differs from one built
+/// component-by-component (`\`), which is why paths expected in tests and paths produced
+/// by lookups must be assembled the same way.
+fn under(root: &Path, rel: &str) -> PathBuf {
+    rel.split('/')
+        .fold(root.to_path_buf(), |acc, part| acc.join(part))
 }
 
 /// Minimal `which` — avoids pulling a crate for one function.
@@ -843,14 +854,10 @@ mod tests {
             TempRoot(dir)
         }
 
-        /// `rel` is written with `/` for readability; split it so the resulting path uses the
-        /// host's separators. `Path::join("bin/code.cmd")` keeps that slash verbatim, and the
-        /// value `which_in` returns is built from real path components — so on Windows the two
-        /// differ only by separator and the expectations below would compare unequal.
+        /// `rel` is written with `/` for readability and assembled component-by-component by
+        /// `under`, so the result matches paths the production lookups build on any platform.
         fn touch(&self, rel: &str) -> PathBuf {
-            let p = rel
-                .split('/')
-                .fold(self.0.clone(), |acc, part| acc.join(part));
+            let p = under(&self.0, rel);
             std::fs::create_dir_all(p.parent().unwrap()).unwrap();
             std::fs::write(&p, "#!/bin/sh\n").unwrap();
             p
