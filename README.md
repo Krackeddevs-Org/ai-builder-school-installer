@@ -16,7 +16,7 @@ Grab the file for your machine from the [**Releases page**](../../releases/lates
 |---|---|
 | **Windows** | `aibs-setup_windows_x64.exe` (portable, just double-click) |
 | **macOS** | the Terminal one-liner below (or the `.dmg`) |
-| **Linux** | `.AppImage` — works on Arch, Ubuntu, Fedora, anything |
+| **Linux** | the Terminal one-liner below (or the `.AppImage`) — works on Arch, Ubuntu, Fedora, anything |
 
 ### Windows
 
@@ -49,12 +49,15 @@ Only needed once. The old right-click → Open trick stopped working in macOS Se
 
 ### Linux
 
-Use the **AppImage**, not the `.deb`. The AppImage is self-contained so it runs on any distro; the `.deb` is only for Debian/Ubuntu and the `.rpm` only for Fedora. Make it executable and run it:
+Open a terminal and paste:
 
 ```bash
-chmod +x "AI Builder School Setup_0.1.3_amd64.AppImage"
-./"AI Builder School Setup_0.1.3_amd64.AppImage"
+curl -fsSL https://raw.githubusercontent.com/ar-Raqmi/ai-builder-school-installer/master/scripts/install-linux.sh | bash
 ```
+
+It finds the latest AppImage for your computer, saves it as `~/.local/bin/ai-builder-school-setup` and opens it. Any time after that you can open it again with `ai-builder-school-setup`. It never uses `sudo`. AppImages normally need FUSE (`libfuse2`); if you don't have it the script notices and unpacks the app first, so it still works.
+
+**Prefer to download it yourself?** Grab the `.AppImage` from the Releases page, not the `.deb` or `.rpm`. The AppImage is self-contained so it runs on any distro; the `.deb` is only for Debian/Ubuntu and the `.rpm` only for Fedora. Then make it executable (`chmod +x` on the file) and run it.
 
 ![System check](docs/screenshots/01-detect.png)
 
@@ -135,7 +138,19 @@ AIBS_TEST_KEY=sk-... cargo test --test live -- --ignored
 
 ## Status
 
-**Tested on Linux** (Arch / EndeavourOS) and **macOS** (Apple silicon) — the app builds, opens and runs its system check there. The **Windows** code paths (winget, PATH refresh, the portable exe) are written and covered by unit tests, but I haven't run the app on a real Windows machine yet, so treat those as unverified. If something breaks there, tell me.
+What I've actually run, so you know what to trust:
+
+- **Linux** (Arch / EndeavourOS): tested. The app builds, opens and runs its system check.
+- **macOS** (Apple silicon): tested the same way.
+- **Windows**: tested on a real Windows VM and it works. The portable exe launches, no console windows pop up, and detection and installs go through.
+
+What I *haven't* tested, so treat these as unverified:
+
+- The **macOS Intel** build on real Intel hardware. It's built by CI, but I haven't run it.
+- The **`.deb` and `.rpm`** packages. I've only run the AppImage.
+- **`install-linux.sh`**. It has only been exercised on a Mac against a faked Linux (stubbed `uname` and `curl`, a pretend AppImage), which covers the architecture check, picking the right file, the no-FUSE fallback and the error messages. It hasn't run on a real Linux machine against a real release yet, and the Linux builds are x86_64 only for now.
+
+If something breaks, tell me.
 
 ---
 

@@ -107,7 +107,13 @@ jobs:
             The `.dmg` works too, but macOS will say it "could not verify" the app. Click Done, then
             System Settings → Privacy & Security → scroll to Security → **Open Anyway**.
 
-            **Linux:** the `.AppImage` (`chmod +x` it, then run it). Ignore the `.deb` and `.rpm`.
+            **Linux:** open a terminal and paste this:
+
+            ```
+            curl -fsSL https://raw.githubusercontent.com/ar-Raqmi/ai-builder-school-installer/master/scripts/install-linux.sh | bash
+            ```
+
+            Prefer to download it yourself? Use the `.AppImage` and ignore the `.deb` and `.rpm`.
           releaseDraft: true
           prerelease: false
           uploadPlainBinary: ${{ matrix.plain_binary || false }}

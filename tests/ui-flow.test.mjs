@@ -192,6 +192,14 @@ const run = async () => {
 
   await shot(page, "04-done");
 
+  check("completion screen offers the course portal, not a typed folder path",
+    (await page.locator("#btnOpenFolder").count()) === 0 &&
+    /course portal/i.test(await page.locator("#btnOpenPortal").innerText()));
+  await page.locator("#btnOpenCode").click();
+  await waitFor(page, () => /Opened VS Code/.test(document.getElementById("logBox").textContent), 5000, "demo open");
+  await sleep(1300);
+  check("Open VS Code in the browser preview closes nothing and throws nothing", errors.length === 0, errors.join(" | "));
+
   console.log("\n=== 6. Skip path (Kilo free models) ===");
   await page.reload({ waitUntil: "load" });
   await waitFor(page, () => document.querySelectorAll("#stepList .step").length === 5, 8000, "reload 2");

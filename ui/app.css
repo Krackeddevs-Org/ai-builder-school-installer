@@ -221,6 +221,12 @@ h1{font-size:22px;font-weight:800;letter-spacing:-.02em;line-height:1.25;margin-
 .btn.ghost:hover:not(:disabled){background:var(--surface-raised)}
 .btn.quiet{background:transparent;color:var(--fg-muted);border-color:transparent;padding:10px 14px}
 .btn.quiet:hover:not(:disabled){background:var(--surface-raised);color:var(--fg)}
+/* A card keeps its light "paper" surface in dark mode, so a button sitting on one must use
+   the card's ink. Inheriting --fg paints light-on-light and the label disappears. */
+.card .btn.ghost{color:var(--paper-ink);border-color:var(--paper-line)}
+.card .btn.ghost:hover:not(:disabled){background:var(--surface-raised)}
+.card .btn.quiet{color:var(--paper-muted)}
+.card .btn.quiet:hover:not(:disabled){background:var(--surface-raised);color:var(--paper-ink)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .btn.pill{border-radius:var(--radius-pill);clip-path:none}
 

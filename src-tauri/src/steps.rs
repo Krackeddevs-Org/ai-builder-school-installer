@@ -504,7 +504,7 @@ pub fn apply_config(
 
 /// Open VS Code so the student can immediately click the Kilo Code icon.
 #[tauri::command(async)]
-pub fn open_vscode(folder: Option<String>) -> RunResult {
+pub fn open_vscode() -> RunResult {
     let code = match platform::find_code_cli() {
         Some(c) => c,
         None => {
@@ -516,10 +516,7 @@ pub fn open_vscode(folder: Option<String>) -> RunResult {
             }
         }
     };
-    let cmd = match folder {
-        Some(f) if !f.trim().is_empty() => CmdSpec::new(&code, &["-n", &f]),
-        _ => CmdSpec::new(&code, &["-n"]),
-    };
+    let cmd = CmdSpec::new(&code, &["-n"]);
     match cmd.run() {
         Ok(_) => RunResult {
             ok: true,

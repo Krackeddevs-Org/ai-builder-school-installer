@@ -10,8 +10,8 @@ Push a tag → four runners build in parallel → a draft Release appears with e
 installer attached.
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v<version>
+git push origin v<version>
 ```
 
 Then go to **Actions** to watch it, and **Releases** to publish the draft.
@@ -39,7 +39,7 @@ No tooling fixes that.
 | Windows | `aibs-setup_windows_x64.exe` | The portable exe: no "installer for the installer". `uploadPlainBinary: true` in the workflow publishes the raw `target/release` binary; tauri-action names it `<binary>_<platform>_<arch>.exe`, with no version. |
 | Windows (fallback) | `AI.Builder.School.Setup_<version>_x64-setup.exe` | NSIS. Use it if the portable exe won't open: it also installs WebView2 (`webviewInstallMode: downloadBootstrapper`). |
 | macOS | the Terminal one-liner (below) | Avoids Gatekeeper's prompt entirely. The `.dmg` still works but needs **Open Anyway**. |
-| Linux | `.AppImage` | See below. |
+| Linux | the Terminal one-liner (below), or the `.AppImage` | Never the `.deb`/`.rpm`; see below. |
 
 The plain exe needs the WebView2 runtime, which ships with Windows 11 and current Windows 10.
 
@@ -60,6 +60,25 @@ does not copy it out of an archive, so the app opens with no prompt.
 
 It reads from `master` and from the latest *published* Release, so a draft Release is
 invisible to it until you publish.
+
+### Linux one-liner
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ar-Raqmi/ai-builder-school-installer/master/scripts/install-linux.sh | bash
+```
+
+Unlike the macOS tarballs, Tauri puts the version in the AppImage's filename, so there is
+no stable `latest/download/<name>` URL. `scripts/install-linux.sh` asks the GitHub API for
+the latest release, picks the asset ending in `_<arch>.AppImage`, and saves it as
+`~/.local/bin/ai-builder-school-setup` so the command students use never changes. The
+script is fetched from `master`, not shipped in a bundle, so the build needs no changes
+for it. It never uses `sudo`; if the machine lacks FUSE it unpacks the AppImage with
+`--appimage-extract` and runs `AppRun` instead.
+
+Like the macOS one, it only sees the latest *published* Release. The API is unauthenticated,
+so a shared network can hit GitHub's rate limit; the script says so and points at the
+Releases page. The workflow only builds Linux for x86_64, so on an ARM machine the script
+reports that no AppImage exists yet.
 
 ## Which Linux file should a student download?
 
@@ -137,4 +156,4 @@ revisit if students start bouncing off it.
 4. Publish the draft Release.
 5. Download the AppImage yourself and run `scripts/verify-appimage.sh` on it.
 6. Hand students **one** link — the Releases page. The release body already names the
-   right file per OS (portable `.exe`, the macOS one-liner, the `.AppImage`).
+   right file per OS (portable `.exe`, the macOS and Linux one-liners).

@@ -47,6 +47,8 @@ const run = async () => {
   await page.addInitScript(() => {
     window.__openedUrls = [];
     window.__invokeCount = 0;
+    window.__closed = 0;
+    window.__vscodeOk = true;
     window.__TAURI__ = {
       core: {
         invoke: async (cmd) => {
@@ -62,9 +64,15 @@ const run = async () => {
               ],
             };
           }
+          if (cmd === "open_vscode") {
+            return window.__vscodeOk
+              ? { ok: true, status: "done", detail: "Opened VS Code" }
+              : { ok: false, status: "failed", detail: "VS Code not found." };
+          }
           return { ok: true, status: "done", detail: "done", log: [], fatal: null };
         },
       },
+      window: { getCurrentWindow: () => ({ close: async () => { window.__closed++; } }) },
       opener: { openUrl: async (url) => { window.__openedUrls.push(url); } },
     };
   });
@@ -169,7 +177,47 @@ const run = async () => {
   const fired = await page.evaluate(() => window.__invokeCount);
   check("three rapid clicks fire verify_key exactly once", fired === 1, "fired " + fired);
 
-  console.log("\n=== 6. no stray errors ===");
+  console.log("\n=== 6. done screen: course portal and Open VS Code ===");
+  const toDone = async () => {
+    if (await page.locator("#viewApi.hidden").count()) {
+      await page.click("#btnInstall");
+      await page.waitForSelector("#viewApi:not(.hidden)", { timeout: 8000 });
+    }
+    await page.click("#btnSkipKey");
+    await page.waitForSelector("#viewDone:not(.hidden)", { timeout: 8000 });
+  };
+  await toDone();
+  check("the typed-path folder button is gone", (await page.locator("#btnOpenFolder").count()) === 0);
+
+  const portalBefore = await page.evaluate(() => window.__openedUrls.length);
+  await page.click("#btnOpenPortal");
+  await sleep(350);
+  opened = await page.evaluate(() => window.__openedUrls);
+  check("portal button opens the course portal through the opener",
+    opened.slice(portalBefore).join() === "https://learn.theaibuilder.school/home", JSON.stringify(opened.slice(portalBefore)));
+
+  await page.click("#btnOpenCode");
+  await sleep(350);
+  check("window is not closed instantly (the success line stays readable)",
+    (await page.evaluate(() => window.__closed)) === 0);
+  check("a second click can't launch another VS Code while waiting",
+    await page.locator("#btnOpenCode").isDisabled());
+  await sleep(1200);
+  check("window closes once VS Code has opened",
+    (await page.evaluate(() => window.__closed)) === 1, "closed " + (await page.evaluate(() => window.__closed)));
+
+  await page.reload({ waitUntil: "load" });
+  await sleep(1000);
+  await page.evaluate(() => { window.__vscodeOk = false; });
+  await toDone();
+  await page.click("#btnOpenCode");
+  await sleep(1600);
+  check("window stays open when VS Code fails to open",
+    (await page.evaluate(() => window.__closed)) === 0);
+  check("the failure is shown in the log", /VS Code not found/.test(await page.locator("#logBox").innerText()));
+  check("Open VS Code can be retried after a failure", !(await page.locator("#btnOpenCode").isDisabled()));
+
+  console.log("\n=== 7. no stray errors ===");
   check("no JavaScript errors", errors.length === 0, errors.join(" | "));
 
   await browser.close();

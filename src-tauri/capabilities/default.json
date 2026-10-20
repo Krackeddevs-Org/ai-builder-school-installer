@@ -5,6 +5,7 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
+    "core:window:allow-close",
     {
       "identifier": "opener:allow-open-url",
       "allow": [
@@ -15,7 +16,8 @@
         { "url": "https://brew.sh/*" },
         { "url": "https://git-scm.com/*" },
         { "url": "https://nodejs.org/*" },
-        { "url": "https://kilo.ai/*" }
+        { "url": "https://kilo.ai/*" },
+        { "url": "https://learn.theaibuilder.school/*" }
       ]
     }
   ]

@@ -21,8 +21,15 @@ const openUrl = (() => {
  * still running. */
 const listen = (window.__TAURI__ && window.__TAURI__.event && window.__TAURI__.event.listen) || null;
 
+/* Closing the wizard once VS Code is up. Browser preview has no window to close. */
+const closeWindow = (window.__TAURI__ && window.__TAURI__.window && window.__TAURI__.window.getCurrentWindow)
+  ? () => window.__TAURI__.window.getCurrentWindow().close()
+  : () => Promise.resolve();
+
 const DEMO = !invoke;
 const BASE_URL = "https://litellm.rapidscreen.io/v1";
+const PORTAL_URL = "https://learn.theaibuilder.school/home";
+const CLOSE_AFTER_MS = 1000;     // long enough to read the success line, so the exit isn't mistaken for a crash
 const PREF_KEY = "aibs.preferredModel";
 const PROGRESS_EVENT = "install-progress";
 const PROGRESS_FLUSH_MS = 100;   // a fast-redrawing installer must not flood the webview
@@ -550,20 +557,19 @@ function showDone(skipped) {
 }
 
 /* ── open VS Code ──────────────────────────────────────────────────────── */
-async function openCode(folder) {
+async function openCode() {
   log("→ opening VS Code");
   let res;
   if (DEMO) { res = { ok: true, detail: "Opened VS Code (demo)" }; }
   else {
-    try { res = await invoke("open_vscode", { folder: folder || null }); }
+    try { res = await invoke("open_vscode"); }
     catch (e) { res = { ok: false, detail: String(e) }; }
   }
   log((res.ok ? "✓ " : "✗ ") + res.detail, res.ok ? "ok" : "er");
-}
-async function openFolder() {
-  // In the shell we let the user type a path; a native dialog needs the dialog plugin.
-  const p = window.prompt("Path to your project folder:");
-  if (p && p.trim()) openCode(p.trim());
+  if (!res.ok) return;   // keep the wizard open so the student can read the error
+  // `-n` opens a new editor window per call, so a second click inside the delay must not fire.
+  $("btnOpenCode").disabled = true;
+  setTimeout(() => closeWindow().catch(() => { /* staying open is harmless */ }), CLOSE_AFTER_MS);
 }
 
 /* ── external links ────────────────────────────────────────────────────── */
@@ -699,7 +705,7 @@ window.addEventListener("DOMContentLoaded", () => {
   $("btnApply").addEventListener("click", busy($("btnApply"), apply));
   $("btnSkipKey").addEventListener("click", busy($("btnSkipKey"), skipKey));
   $("btnOpenCode").addEventListener("click", busy($("btnOpenCode"), () => openCode()));
-  $("btnOpenFolder").addEventListener("click", busy($("btnOpenFolder"), openFolder));
+  $("btnOpenPortal").addEventListener("click", busy($("btnOpenPortal"), () => goTo(PORTAL_URL, "the course portal")));
   $("apiKey").addEventListener("keydown", (e) => { if (e.key === "Enter") ping(); });
   if (listen) listen(PROGRESS_EVENT, (ev) => onProgress(ev.payload));
   detect();

@@ -30,6 +30,10 @@ const run = async () => {
     console.log("saved", name);
   };
 
+  // Clicking the buttons below leaves the scroll area partway down, which clips the first
+  // rows of the card in the shot.
+  const scrollToTop = () => page.evaluate(() => { document.querySelector(".scroll").scrollTop = 0; });
+
   const waitFor = async (fn, label) => {
     const t0 = Date.now();
     while (Date.now() - t0 < 15000) {
@@ -65,6 +69,7 @@ const run = async () => {
   // apply -> done
   await page.click("#btnApply");
   await waitFor(() => !document.getElementById("viewDone").classList.contains("hidden"), "done");
+  await scrollToTop();
   await sleep(700);
   await shot("04-done");
 
@@ -83,6 +88,7 @@ const run = async () => {
   await sleep(500);
   await page.click("#btnSkipKey");
   await waitFor(() => !document.getElementById("viewDone").classList.contains("hidden"), "done2");
+  await scrollToTop();
   await sleep(600);
   await shot("06-skipped");
 
