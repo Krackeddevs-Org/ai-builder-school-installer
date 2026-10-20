@@ -37,7 +37,9 @@ fn main() {
         .contains("kilocode.Kilo-Code"));
 
     println!("\n--- install_extension(dry_run = false) ---");
-    let real = steps::install_extension_streaming(false, &mut |l, t| println!("  [{}] {l}", if t { "live" } else { "line" }));
+    let real = steps::install_extension_streaming(false, &mut |l, t| {
+        println!("  [{}] {l}", if t { "live" } else { "line" })
+    });
     println!(
         "  ok={} status={} detail={}",
         real.ok, real.status, real.detail

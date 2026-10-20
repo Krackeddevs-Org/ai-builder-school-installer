@@ -48,7 +48,10 @@ struct Throttle {
 
 impl Throttle {
     fn ready(&mut self, now: Instant) -> bool {
-        if self.last.is_some_and(|t| now.duration_since(t) < self.every) {
+        if self
+            .last
+            .is_some_and(|t| now.duration_since(t) < self.every)
+        {
             return false;
         }
         self.last = Some(now);

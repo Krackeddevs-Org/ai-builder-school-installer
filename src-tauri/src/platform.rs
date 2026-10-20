@@ -111,7 +111,11 @@ impl CmdSpec {
             };
             let transient = redrawn || line.contains('%');
             if !transient {
-                let kept = if stream == Stream::Err { &mut stderr } else { &mut stdout };
+                let kept = if stream == Stream::Err {
+                    &mut stderr
+                } else {
+                    &mut stdout
+                };
                 kept.push_str(&line);
                 kept.push('\n');
             }
@@ -122,7 +126,11 @@ impl CmdSpec {
             .wait()
             .map_err(|e| format!("failed to run `{}`: {e}", self.display))?;
         let (stdout, stderr) = (stdout.trim().to_string(), stderr.trim().to_string());
-        if !status.success() && !status.code().is_some_and(|c| self.ok_exit_codes.contains(&c)) {
+        if !status.success()
+            && !status
+                .code()
+                .is_some_and(|c| self.ok_exit_codes.contains(&c))
+        {
             return Err(if stderr.is_empty() {
                 format!("`{}` exited with {}", self.display, status)
             } else {
@@ -212,7 +220,9 @@ fn clean_line(raw: &str) -> Option<String> {
         }
     }
     let line = out.trim();
-    line.chars().any(char::is_alphanumeric).then(|| line.to_string())
+    line.chars()
+        .any(char::is_alphanumeric)
+        .then(|| line.to_string())
 }
 
 /// Consume the rest of an escape sequence whose ESC has already been read.
@@ -833,8 +843,14 @@ mod tests {
             TempRoot(dir)
         }
 
+        /// `rel` is written with `/` for readability; split it so the resulting path uses the
+        /// host's separators. `Path::join("bin/code.cmd")` keeps that slash verbatim, and the
+        /// value `which_in` returns is built from real path components — so on Windows the two
+        /// differ only by separator and the expectations below would compare unequal.
         fn touch(&self, rel: &str) -> PathBuf {
-            let p = self.0.join(rel);
+            let p = rel
+                .split('/')
+                .fold(self.0.clone(), |acc, part| acc.join(part));
             std::fs::create_dir_all(p.parent().unwrap()).unwrap();
             std::fs::write(&p, "#!/bin/sh\n").unwrap();
             p
@@ -901,17 +917,16 @@ mod tests {
 
     #[test]
     fn windows_install_dirs_cover_git_node_and_vscode() {
-        let dirs = windows_install_dirs(
-            Some("PF"),
-            Some("PF86"),
-            Some("LOCAL"),
-        );
+        let dirs = windows_install_dirs(Some("PF"), Some("PF86"), Some("LOCAL"));
         for expected in [
             Path::new("PF").join("Git").join("cmd"),
             Path::new("PF").join("nodejs"),
             Path::new("PF").join("Microsoft VS Code").join("bin"),
             Path::new("PF86").join("nodejs"),
-            Path::new("LOCAL").join("Programs").join("Microsoft VS Code").join("bin"),
+            Path::new("LOCAL")
+                .join("Programs")
+                .join("Microsoft VS Code")
+                .join("bin"),
             Path::new("LOCAL").join("Programs").join("Git").join("cmd"),
         ] {
             assert!(dirs.contains(&expected), "missing {expected:?}");
@@ -1052,7 +1067,10 @@ mod tests {
 
     #[test]
     fn splitter_treats_crlf_as_one_ordinary_line_ending() {
-        assert_eq!(collect(&[b"one\r\ntwo\r\n"]), [("one".into(), false), ("two".into(), false)]);
+        assert_eq!(
+            collect(&[b"one\r\ntwo\r\n"]),
+            [("one".into(), false), ("two".into(), false)]
+        );
     }
 
     #[test]
@@ -1070,7 +1088,10 @@ mod tests {
 
     #[test]
     fn splitter_resolves_cr_lf_split_across_reads() {
-        assert_eq!(collect(&[b"line\r", b"\nnext"]), [("line".into(), false), ("next".into(), false)]);
+        assert_eq!(
+            collect(&[b"line\r", b"\nnext"]),
+            [("line".into(), false), ("next".into(), false)]
+        );
     }
 
     #[test]
@@ -1087,14 +1108,29 @@ mod tests {
 
     #[test]
     fn clean_line_strips_ansi_escapes() {
-        assert_eq!(clean_line("\x1b[2K\x1b[32mDownloading\x1b[0m"), Some("Downloading".into()));
-        assert_eq!(clean_line("\x1b]0;title\x07Installing"), Some("Installing".into()));
+        assert_eq!(
+            clean_line("\x1b[2K\x1b[32mDownloading\x1b[0m"),
+            Some("Downloading".into())
+        );
+        assert_eq!(
+            clean_line("\x1b]0;title\x07Installing"),
+            Some("Installing".into())
+        );
         assert_eq!(clean_line("\x1b[?25lHello\x1b[?25h"), Some("Hello".into()));
     }
 
     #[test]
     fn clean_line_drops_spinner_and_bar_only_lines() {
-        for junk in ["-", "\\", "|", "/", "   ", "", "\u{2588}\u{2588}\u{2592}\u{2592}", "\x1b[1A"] {
+        for junk in [
+            "-",
+            "\\",
+            "|",
+            "/",
+            "   ",
+            "",
+            "\u{2588}\u{2588}\u{2592}\u{2592}",
+            "\x1b[1A",
+        ] {
             assert_eq!(clean_line(junk), None, "{junk:?}");
         }
     }
@@ -1171,7 +1207,8 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn run_streaming_does_not_deadlock_on_a_flood_of_stderr() {
-        let spec = sh("i=0; while [ $i -lt 20000 ]; do echo err-$i >&2; i=$((i+1)); done; echo done");
+        let spec =
+            sh("i=0; while [ $i -lt 20000 ]; do echo err-$i >&2; i=$((i+1)); done; echo done");
         assert_eq!(spec.run().unwrap(), "done");
     }
 
