@@ -1,12 +1,12 @@
 name: Release
 
 # Builds installers for all three OSes on native runners.
-# Triggered by pushing a tag like v0.1.0.
+# Triggered by pushing a tag like v0.1.0. No manual dispatch: a run on a branch would publish a release named
+# after the branch, outside the tag rule.
 on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
 
 jobs:
   release:
