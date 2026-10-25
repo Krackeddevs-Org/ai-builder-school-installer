@@ -38,7 +38,7 @@ jobs:
     name: Build (${{ matrix.label }})
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Install Linux system dependencies
         if: matrix.platform == 'ubuntu-22.04'
@@ -60,18 +60,20 @@ jobs:
             libssl-dev
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable branch, 26 Oct 2026
         with:
+          # Pinned by SHA, so the toolchain is no longer read from the ref name.
+          toolchain: stable
           # macOS runners need BOTH targets so one runner can produce both DMGs.
           targets: ${{ startsWith(matrix.platform, 'macos') && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Cache Rust build
-        uses: swatinem/rust-cache@v2
+        uses: swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: "./src-tauri -> target"
 
@@ -83,37 +85,31 @@ jobs:
         run: cargo test --lib
 
       - name: Build the app
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "AI Builder School Setup ${{ github.ref_name }}"
           releaseBody: |
-            One-click setup for AI Builder School students.
+            One-click setup for AI Builder School students, built by ambassador ar-Raqmi
+            (original: https://github.com/ar-Raqmi/ai-builder-school-installer). This is the
+            Krackeddevs-Org copy the school links to.
 
-            Installs VS Code, Git, Node.js and the Kilo Code extension, then configures
-            your API key. Pick the one for your computer:
+            Installs VS Code, Git, Node.js and the Kilo Code extension, then puts your
+            KrackedDevs key into Kilo Code. Pick the file for your computer:
 
-            **Windows:** `aibs-setup_windows_x64.exe` — portable, just double-click it (recommended).
-            If it doesn't open, use the `-setup.exe` instead; it also installs WebView2.
+            **Windows:** `aibs-setup_windows_x64.exe`. Double-click it. If it does not open,
+            use the `-setup.exe` instead; it also installs WebView2.
 
-            **macOS:** open Terminal and paste this (no security prompts):
+            **Mac with Apple silicon (M1 and later):** the `aarch64.dmg`.
+            **Mac with Intel:** the `x64.dmg`.
 
-            ```
-            curl -fsSL https://raw.githubusercontent.com/ar-Raqmi/ai-builder-school-installer/master/scripts/install-mac.sh | bash
-            ```
+            **Linux:** the `.AppImage`. Ignore the `.deb` and `.rpm`.
 
-            The `.dmg` works too, but macOS will say it "could not verify" the app. Click Done, then
-            System Settings → Privacy & Security → scroll to Security → **Open Anyway**.
-
-            **Linux:** open a terminal and paste this:
-
-            ```
-            curl -fsSL https://raw.githubusercontent.com/ar-Raqmi/ai-builder-school-installer/master/scripts/install-linux.sh | bash
-            ```
-
-            Prefer to download it yourself? Use the `.AppImage` and ignore the `.deb` and `.rpm`.
+            The app is not signed yet. Windows says "Windows protected your PC": click
+            **More info**, then **Run anyway**. A Mac says it "could not verify" the app: click
+            **Done**, then System Settings, Privacy & Security, scroll to Security, **Open Anyway**.
           releaseDraft: true
           prerelease: false
           uploadPlainBinary: ${{ matrix.plain_binary || false }}

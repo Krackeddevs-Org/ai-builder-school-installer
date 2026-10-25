@@ -8,6 +8,12 @@ I've been enjoying entering the **AI Builder School**, but the problem I kept se
 
 So I made this **AI Builder School Installer** :>
 
+> **Krackeddevs-Org copy.** This is the copy The AI Builder School links to, forked from
+> [ar-Raqmi/ai-builder-school-installer](https://github.com/ar-Raqmi/ai-builder-school-installer) (thank you, ar-Raqmi).
+> Students download from this repo's versioned [Releases](https://github.com/Krackeddevs-Org/ai-builder-school-installer/releases)
+> page. Releases here are immutable and the build actions are pinned by commit. The Terminal one-liners below fetch
+> from the original repo, so the school does not use them.
+
 ## Download
 
 Grab the file for your machine from the [**Releases page**](../../releases/latest):
